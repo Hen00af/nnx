@@ -1,0 +1,4 @@
+ngx_addon_name=ngx_http_nnx_module
+HTTP_MODULES="$HTTP_MODULES ngx_http_nnx_module"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/../src/nginx_adapter.c"
+CORE_INCS="$CORE_INCS $ngx_addon_dir/../include $ngx_addon_dir/../src"
