@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "../internal/nnx_internal.h"
 
@@ -49,4 +50,79 @@ int nnx_redirect(nnx_ctx *ctx, int status, const char *location)
 {
     if (!location || nnx_set_header(ctx, "Location", location) != 0) return -1;
     return nnx_text(ctx, status, "");
+}
+
+static int nnx_cookie_token_valid(const char *s)
+{
+    const unsigned char *p = (const unsigned char *)s;
+    if (!s || !*s) return 0;
+    while (*p) {
+        if (*p <= 0x20 || *p >= 0x7f || *p == '=' || *p == ';' || *p == ',')
+            return 0;
+        ++p;
+    }
+    return 1;
+}
+
+static int nnx_cookie_value_valid(const char *s)
+{
+    const unsigned char *p = (const unsigned char *)s;
+    if (!s) return 0;
+    while (*p) {
+        if (*p < 0x20 || *p >= 0x7f || *p == ';' || *p == '\r' || *p == '\n')
+            return 0;
+        ++p;
+    }
+    return 1;
+}
+
+int nnx_set_cookie(nnx_ctx *ctx, const nnx_cookie_config *cookie)
+{
+    char value[2048];
+    size_t used;
+    int n;
+
+    if (!ctx || !cookie || !nnx_cookie_token_valid(cookie->name) ||
+        !nnx_cookie_value_valid(cookie->value))
+        return -1;
+    if (cookie->same_site == NNX_SAME_SITE_NONE && !cookie->secure)
+        return -1;
+
+    n = snprintf(value, sizeof(value), "%s=%s", cookie->name, cookie->value);
+    if (n < 0 || (size_t)n >= sizeof(value)) return -1;
+    used = (size_t)n;
+
+#define NNX_COOKIE_APPEND(...) do { \
+    n = snprintf(value + used, sizeof(value) - used, __VA_ARGS__); \
+    if (n < 0 || (size_t)n >= sizeof(value) - used) return -1; \
+    used += (size_t)n; \
+} while (0)
+
+    if (cookie->path && *cookie->path)
+        NNX_COOKIE_APPEND("; Path=%s", cookie->path);
+    if (cookie->domain && *cookie->domain)
+        NNX_COOKIE_APPEND("; Domain=%s", cookie->domain);
+    if (cookie->max_age != 0)
+        NNX_COOKIE_APPEND("; Max-Age=%d", cookie->max_age);
+    if (cookie->secure)
+        NNX_COOKIE_APPEND("; Secure");
+    if (cookie->http_only)
+        NNX_COOKIE_APPEND("; HttpOnly");
+
+    switch (cookie->same_site) {
+    case NNX_SAME_SITE_LAX:
+        NNX_COOKIE_APPEND("; SameSite=Lax");
+        break;
+    case NNX_SAME_SITE_STRICT:
+        NNX_COOKIE_APPEND("; SameSite=Strict");
+        break;
+    case NNX_SAME_SITE_NONE:
+        NNX_COOKIE_APPEND("; SameSite=None");
+        break;
+    default:
+        break;
+    }
+
+#undef NNX_COOKIE_APPEND
+    return nnx_set_header(ctx, "Set-Cookie", value);
 }
