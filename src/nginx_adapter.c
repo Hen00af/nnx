@@ -35,7 +35,7 @@ static int nnx_method_from_nginx(ngx_http_request_t *r, nnx_method *m)
 
 int nnx_adapter_send(nnx_ctx *ctx, int status, const char *body)
 {
-    ngx_http_request_t *r; ngx_buf_t *b; ngx_chain_t out; size_t len; ngx_int_t rc;
+    ngx_http_request_t *r; ngx_buf_t *b; ngx_chain_t out; u_char *data; size_t len; ngx_int_t rc;
     if (!ctx || !ctx->native_request || !body) return -1;
     r = ctx->native_request; len = strlen(body);
     r->headers_out.status = status;
@@ -44,16 +44,19 @@ int nnx_adapter_send(nnx_ctx *ctx, int status, const char *body)
     rc = ngx_http_send_header(r);
     if (rc == NGX_ERROR || rc > NGX_OK) return -1;
     if (r->header_only) return 0;
+    data = ngx_pnalloc(r->pool, len);
+    if (!data && len != 0) return -1;
+    if (len != 0) ngx_memcpy(data, body, len);
     b = ngx_calloc_buf(r->pool);
     if (!b) return -1;
-    b->pos = (u_char *)body; b->last = (u_char *)body + len;
+    b->pos = data; b->last = data + len;
     b->memory = 1; b->last_buf = 1;
     out.buf = b; out.next = NULL;
     rc = ngx_http_output_filter(r, &out);
     return rc == NGX_ERROR ? -1 : 0;
 }
 
-static ngx_int_t nnx_handler(ngx_http_request_t *r)
+static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
 {
     nnx_method method; nnx_handler handler; nnx_ctx ctx; char *path;
     if (!nnx_active_app) return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -72,7 +75,7 @@ static char *nnx_enable(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_core_loc_conf_t *clcf; (void)cmd; (void)conf;
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
-    clcf->handler = nnx_handler;
+    clcf->handler = nnx_http_handler;
     return NGX_CONF_OK;
 }
 
