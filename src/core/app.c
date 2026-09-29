@@ -8,12 +8,18 @@ void nnx_free(nnx_app *app)
     size_t i;
     if (!app) return;
     for (i = 0; i < app->route_count; ++i) free(app->routes[i].path);
-    free(app->routes);
-    free(app);
+    free(app->routes); free(app);
 }
 
-int nnx_get(nnx_app *app, const char *path, nnx_handler h)
-{ return nnx_add_route(app, NNX_GET, path, h); }
+#define NNX_ROUTE_FN(name, method) \
+int name(nnx_app *app, const char *path, nnx_handler h) \
+{ return nnx_add_route(app, method, path, h); }
 
-int nnx_post(nnx_app *app, const char *path, nnx_handler h)
-{ return nnx_add_route(app, NNX_POST, path, h); }
+NNX_ROUTE_FN(nnx_get, NNX_GET)
+NNX_ROUTE_FN(nnx_post, NNX_POST)
+NNX_ROUTE_FN(nnx_put, NNX_PUT)
+NNX_ROUTE_FN(nnx_patch, NNX_PATCH)
+NNX_ROUTE_FN(nnx_delete, NNX_DELETE)
+NNX_ROUTE_FN(nnx_head, NNX_HEAD)
+NNX_ROUTE_FN(nnx_options, NNX_OPTIONS)
+NNX_ROUTE_FN(nnx_any, NNX_METHOD_ANY)

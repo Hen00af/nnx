@@ -1,17 +1,31 @@
 #include <assert.h>
+#include <string.h>
 #include <nnx.h>
 #include "../../src/internal/nnx_internal.h"
 
-static void handler(nnx_ctx *ctx) { (void)ctx; }
+static void static_h(nnx_ctx *c) { (void)c; }
+static void param_h(nnx_ctx *c) { (void)c; }
+static void wildcard_h(nnx_ctx *c) { (void)c; }
+static void any_h(nnx_ctx *c) { (void)c; }
 
 int main(void)
 {
-    nnx_app *app = nnx_new();
+    nnx_app *app = nnx_new(); nnx_ctx ctx = {0};
     assert(app);
-    assert(nnx_get(app, "/hello", handler) == 0);
-    assert(nnx_match_route(app, NNX_GET, "/hello") == handler);
-    assert(nnx_match_route(app, NNX_POST, "/hello") == 0);
-    assert(nnx_match_route(app, NNX_GET, "/missing") == 0);
+    assert(nnx_get(app, "/users/:id", param_h) == 0);
+    assert(nnx_get(app, "/users/me", static_h) == 0);
+    assert(nnx_get(app, "/assets/*", wildcard_h) == 0);
+    assert(nnx_any(app, "/health", any_h) == 0);
+    assert(nnx_put(app, "/users/:id", param_h) == 0);
+
+    assert(nnx_match_route(app, NNX_GET, "/users/me", &ctx) == static_h);
+    assert(nnx_match_route(app, NNX_GET, "/users/42", &ctx) == param_h);
+    assert(strcmp(nnx_param(&ctx, "id"), "42") == 0);
+    assert(nnx_match_route(app, NNX_GET, "/assets/css/app.css", &ctx) == wildcard_h);
+    assert(strcmp(nnx_wildcard(&ctx), "css/app.css") == 0);
+    assert(nnx_match_route(app, NNX_DELETE, "/health", &ctx) == any_h);
+    assert(nnx_match_route(app, NNX_PUT, "/users/7", &ctx) == param_h);
+    assert(nnx_match_route(app, NNX_POST, "/missing", &ctx) == 0);
     nnx_free(app);
     return 0;
 }
