@@ -1,31 +1,55 @@
-# Runtime design
+# nnx runtime
 
-nnx does not vendor Nginx.
+## Chosen architecture
 
-The intended developer experience is:
+nnx does not copy or vendor Nginx. It integrates through the supported Nginx
+module boundary.
 
-```c
-nnx_app *app = nnx_new();
-nnx_get(app, "/", hello);
-return nnx_run(app, 8080);
+```text
+application API
+    |
+ nnx core
+    |
+ Nginx HTTP module (.so or static module)
+    |
+ external Nginx binary
 ```
 
-## Constraint
+The module must be built for a compatible Nginx binary. Nginx validates module
+version/build compatibility.
 
-A C pointer such as `nnx_app *` cannot survive `exec()`. If nnx launches an
-external Nginx executable, it cannot simply hand the in-memory router to the
-new process.
+## Runtime responsibilities
 
-That gives the runtime two honest implementation paths:
+`nnx_run()` is responsible for process-level concerns:
 
-1. build/load an nnx-generated Nginx module containing application
-   registration; or
-2. keep application code in a separate process and have Nginx proxy to it.
+1. locate the external Nginx executable (or use `NNX_NGINX_BIN`);
+2. create an isolated temporary prefix;
+3. generate an nnx-specific nginx.conf;
+4. start Nginx in the foreground;
+5. forward termination and wait for shutdown;
+6. clean temporary runtime files.
 
-The current project is pursuing the module path because the goal is to make
-nnx a C framework backed directly by Nginx rather than another upstream HTTP
-server hidden behind a reverse proxy.
+The HTTP adapter owns request-level concerns:
 
-`src/runtime.c` now owns external-Nginx discovery/process lifecycle. The next
-step is generated configuration plus application registration at Nginx worker
-initialization.
+```text
+ngx_http_request_t -> nnx_ctx -> router -> handler
+                   <- nnx_send <- response
+```
+
+## Important limitation
+
+An in-memory `nnx_app *` cannot cross an `exec()` boundary. Therefore the
+final standalone application build must put the application's registration
+code into the Nginx-loadable module (or statically linked Nginx module), rather
+than attempting to pass C function pointers to an already-running unrelated
+Nginx process.
+
+That build step is part of the framework/toolchain, not something the public
+handler API should expose.
+
+## Blocking handlers
+
+Nginx workers are event-driven. A synchronous handler that performs blocking
+database/network I/O blocks that worker. The initial nnx API is intentionally
+synchronous; asynchronous I/O needs a separate API rather than hiding blocking
+work behind the current handler signature.

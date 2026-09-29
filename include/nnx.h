@@ -10,6 +10,11 @@ void nnx_free(nnx_app *app);
 int nnx_get(nnx_app *app, const char *path, nnx_handler handler);
 int nnx_post(nnx_app *app, const char *path, nnx_handler handler);
 int nnx_send(nnx_ctx *ctx, int status, const char *body);
+
+/*
+ * Runs the standalone development runtime.
+ * The runtime owns an external Nginx process; Nginx itself is not vendored.
+ */
 int nnx_run(nnx_app *app, int port);
 
 #endif
