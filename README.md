@@ -1,5 +1,6 @@
 # nnx
 
+
 Experimental Echo-like C web framework powered by external Nginx.
 
 ```text
@@ -22,3 +23,5 @@ make test
 Implemented: GET/POST registration, exact routing, Nginx URI/method dispatch and Nginx response output.
 
 Next milestone: bind application registration to the Nginx worker lifecycle, then make the target `nnx_run(app, 8080)` experience real.
+
+f
