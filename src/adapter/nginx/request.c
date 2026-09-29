@@ -10,6 +10,7 @@ typedef struct nnx_nginx_request_state {
     const nnx_adapter *adapter;
     nnx_ctx ctx;
     nnx_handler handler;
+    int error_status;
     ngx_msec_t started;
 } nnx_nginx_request_state;
 
@@ -38,11 +39,20 @@ static ngx_int_t nnx_dispatch_request(ngx_http_request_t *r,
                                       nnx_nginx_request_state *state)
 {
     nnx_ctx *ctx = &state->ctx;
-    nnx_dispatch(state->app, ctx, state->handler);
+
+    if (state->error_status)
+        nnx_dispatch_error(state->app, ctx, state->error_status);
+    else
+        nnx_dispatch(state->app, ctx, state->handler);
+
+    if (!ctx->response_sent)
+        nnx_dispatch_error(state->app, ctx, 500);
+
     ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
         "[NNX] %V %V %i %Mms", &r->method_name, &r->uri,
         ctx->response_sent ? ctx->response_status : 500,
         ngx_current_msec - state->started);
+
     return ctx->response_sent ? NGX_OK : NGX_HTTP_INTERNAL_SERVER_ERROR;
 }
 
@@ -110,8 +120,12 @@ static void nnx_body_ready(ngx_http_request_t *r)
     }
 
     rc = nnx_copy_request_body(r, state);
-    if (rc == NGX_OK)
+    if (rc == NGX_OK) {
         rc = nnx_dispatch_request(r, state);
+    } else {
+        state->error_status = 500;
+        rc = nnx_dispatch_request(r, state);
+    }
     ngx_http_finalize_request(r, rc);
 }
 
@@ -125,7 +139,6 @@ ngx_int_t nnx_nginx_handle_request(ngx_http_request_t *r, nnx_app *app,
     ngx_int_t rc;
 
     if (!app || !adapter) return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    if (nnx_method_from_nginx(r, &method) != 0) return NGX_HTTP_NOT_ALLOWED;
 
     state = ngx_pcalloc(r->pool, sizeof(*state));
     if (!state) return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -139,8 +152,16 @@ ngx_int_t nnx_nginx_handle_request(ngx_http_request_t *r, nnx_app *app,
     state->started = ngx_current_msec;
     nnx_ctx_init(&state->ctx, r, adapter, method_name, path);
 
+    if (nnx_method_from_nginx(r, &method) != 0) {
+        state->error_status = nnx_route_path_exists(app, path) ? 405 : 404;
+        return nnx_dispatch_request(r, state);
+    }
+
     state->handler = nnx_match_route(app, method, path, &state->ctx);
-    if (!state->handler) return NGX_HTTP_NOT_FOUND;
+    if (!state->handler) {
+        state->error_status = nnx_route_path_exists(app, path) ? 405 : 404;
+        return nnx_dispatch_request(r, state);
+    }
 
     if (r->headers_in.content_length_n > 0 || r->headers_in.chunked) {
         ngx_http_set_ctx(r, state, ngx_http_nnx_module);
