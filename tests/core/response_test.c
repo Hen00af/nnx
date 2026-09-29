@@ -34,6 +34,7 @@ static const char *fake_header(void *request, const char *name)
     if (strcmp(name, "Cookie") == 0) return "session=abc123; theme=dark";
     if (strcmp(name, "Content-Type") == 0)
         return "application/x-www-form-urlencoded; charset=utf-8";
+    if (strcmp(name, "Host") == 0) return "example.test";
     return NULL;
 }
 
@@ -83,7 +84,7 @@ int main(void)
     assert(strcmp(nnx_path(&ctx), "/hello") == 0);
     assert(strcmp(nnx_query(&ctx, "q"), "nnx") == 0);
     assert(strcmp(nnx_header(&ctx, "X-Test"), "yes") == 0);
-    assert(strcmp(nnx_host(&ctx), "") != 0 || nnx_host(&ctx) == NULL);
+    assert(strcmp(nnx_host(&ctx), "example.test") == 0);
     assert(strcmp(nnx_client_ip(&ctx), "127.0.0.1") == 0);
     assert(strcmp(nnx_scheme(&ctx), "https") == 0);
 
