@@ -1,22 +1,23 @@
 CC ?= cc
 CFLAGS ?= -Wall -Wextra -Werror -std=c11
-CPPFLAGS += -Iinclude -Isrc
+CPPFLAGS += -Iinclude -Isrc/internal
 
-CORE = src/app.c src/router.c
+CORE = src/core/app.c src/core/context.c src/core/response.c
+ROUTER = src/router/router.c
 
-.PHONY: all test runtime-check clean
+.PHONY: all test clean
 
-all: test runtime-check
+all: test
 
-tests/router_test: tests/router_test.c $(CORE) include/nnx.h src/nnx_internal.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) tests/router_test.c $(CORE) -o $@
+tests/router/router_test: tests/router/router_test.c $(CORE) $(ROUTER) include/nnx.h src/internal/nnx_internal.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) tests/router/router_test.c $(CORE) $(ROUTER) -o $@
 
-test: tests/router_test
-	./tests/router_test
+tests/core/response_test: tests/core/response_test.c src/core/context.c src/core/response.c include/nnx.h src/internal/nnx_internal.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) tests/core/response_test.c src/core/context.c src/core/response.c -o $@
 
-runtime-check: src/runtime.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c src/runtime.c -o /tmp/nnx-runtime.o
-	rm -f /tmp/nnx-runtime.o
+test: tests/router/router_test tests/core/response_test
+	./tests/router/router_test
+	./tests/core/response_test
 
 clean:
-	rm -f tests/router_test
+	rm -f tests/router/router_test tests/core/response_test

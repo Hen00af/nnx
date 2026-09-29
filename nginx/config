@@ -1,6 +1,6 @@
 ngx_module_type=HTTP
 ngx_module_name=ngx_http_nnx_module
-ngx_module_incs="$ngx_addon_dir/../include $ngx_addon_dir/../src"
-ngx_module_srcs="$ngx_addon_dir/../src/nginx_adapter.c $ngx_addon_dir/../src/app.c $ngx_addon_dir/../src/router.c $ngx_addon_dir/../src/response.c"
+ngx_module_incs="$ngx_addon_dir/../include $ngx_addon_dir/../src/internal"
+ngx_module_srcs="$ngx_addon_dir/../src/adapter/nginx/module.c $ngx_addon_dir/../src/adapter/nginx/response.c $ngx_addon_dir/../src/core/app.c $ngx_addon_dir/../src/core/context.c $ngx_addon_dir/../src/core/response.c $ngx_addon_dir/../src/router/router.c"
 . auto/module
 ngx_addon_name=$ngx_module_name
