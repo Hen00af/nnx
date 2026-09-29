@@ -53,7 +53,7 @@ int nnx_adapter_send(nnx_ctx *ctx, int status, const char *body)
     return rc == NGX_ERROR ? -1 : 0;
 }
 
-static ngx_int_t nnx_handler(ngx_http_request_t *r)
+static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
 {
     nnx_method method; nnx_handler handler; nnx_ctx ctx; char *path;
     if (!nnx_active_app) return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -72,7 +72,7 @@ static char *nnx_enable(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_core_loc_conf_t *clcf; (void)cmd; (void)conf;
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
-    clcf->handler = nnx_handler;
+    clcf->handler = nnx_http_handler;
     return NGX_CONF_OK;
 }
 
