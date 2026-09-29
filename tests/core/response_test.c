@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include "../../src/internal/nnx_internal.h"
 
 static int status_seen;
@@ -29,7 +30,11 @@ static const char *fake_query(void *request, const char *name)
 static const char *fake_header(void *request, const char *name)
 {
     (void)request;
-    return strcmp(name, "X-Test") == 0 ? "yes" : NULL;
+    if (strcmp(name, "X-Test") == 0) return "yes";
+    if (strcmp(name, "Cookie") == 0) return "session=abc123; theme=dark";
+    if (strcmp(name, "Content-Type") == 0)
+        return "application/x-www-form-urlencoded; charset=utf-8";
+    return NULL;
 }
 
 static int fake_set_header(void *request, const char *name, const char *value)
@@ -46,12 +51,19 @@ static int fake_log(void *request, const char *message)
     return 0;
 }
 
+static void *fake_alloc(void *request, size_t size)
+{
+    (void)request;
+    return malloc(size);
+}
+
 int main(void)
 {
     nnx_ctx ctx;
     size_t body_len;
     const nnx_adapter fake = {
-        fake_send, fake_query, fake_header, fake_set_header, fake_log
+        fake_send, fake_query, fake_header, fake_set_header, fake_log,
+        fake_alloc
     };
 
     nnx_ctx_init(&ctx, NULL, &fake, "POST", "/hello");
@@ -60,10 +72,13 @@ int main(void)
     assert(strcmp(nnx_query(&ctx, "q"), "nnx") == 0);
     assert(strcmp(nnx_header(&ctx, "X-Test"), "yes") == 0);
 
-    nnx_ctx_set_body(&ctx, "payload", 7);
+    nnx_ctx_set_body(&ctx, "name=Seiya+Hattori&lang=C%2B%2B", 35);
     assert(nnx_body(&ctx, &body_len) != NULL);
-    assert(body_len == 7);
-    assert(strcmp(nnx_body_text(&ctx), "payload") == 0);
+    assert(body_len == 35);
+    assert(strcmp(nnx_form(&ctx, "name"), "Seiya Hattori") == 0);
+    assert(strcmp(nnx_form(&ctx, "lang"), "C++") == 0);
+    assert(strcmp(nnx_cookie(&ctx, "session"), "abc123") == 0);
+    assert(strcmp(nnx_cookie(&ctx, "theme"), "dark") == 0);
 
     assert(nnx_json(&ctx, 201, "{\"ok\":true}") == 0);
     assert(status_seen == 201);
