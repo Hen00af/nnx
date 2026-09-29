@@ -10,6 +10,11 @@ void nnx_free(nnx_app *app);
 int nnx_get(nnx_app *app, const char *path, nnx_handler handler);
 int nnx_post(nnx_app *app, const char *path, nnx_handler handler);
 int nnx_send(nnx_ctx *ctx, int status, const char *body);
-int nnx_run(nnx_app *app, int port);
+
+/*
+ * Native Nginx-module applications implement this registration hook.
+ * It is called inside each Nginx worker, so handler pointers remain valid.
+ */
+int nnx_register(nnx_app *app);
 
 #endif
