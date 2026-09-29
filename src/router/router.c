@@ -134,6 +134,28 @@ nnx_handler nnx_match_route(const nnx_app *app, nnx_method method, const char *p
     return NULL;
 }
 
+int nnx_route_path_exists(const nnx_app *app, const char *path)
+{
+    size_t i;
+    nnx_ctx scratch = {0};
+
+    if (!app || !path) return 0;
+    for (i = 0; i < app->route_count; ++i) {
+        const char *pattern = app->routes[i].path;
+        scratch.param_count = 0;
+        scratch.wildcard[0] = 0;
+
+        if (!strchr(pattern, ':') && !strchr(pattern, '*')) {
+            if (strcmp(pattern, path) == 0) return 1;
+        } else if (strchr(pattern, ':') && !strchr(pattern, '*')) {
+            if (param_match(pattern, path, &scratch)) return 1;
+        } else if (strchr(pattern, '*')) {
+            if (wildcard_match(pattern, path, &scratch)) return 1;
+        }
+    }
+    return 0;
+}
+
 const char *nnx_param(nnx_ctx *ctx, const char *name)
 {
     size_t i;
