@@ -11,6 +11,8 @@ typedef struct nnx_nginx_request_state {
     nnx_ctx ctx;
     nnx_handler handler;
     int error_status;
+    int auto_options;
+    unsigned allowed_methods;
     ngx_msec_t started;
 } nnx_nginx_request_state;
 
@@ -40,10 +42,15 @@ static ngx_int_t nnx_dispatch_request(ngx_http_request_t *r,
 {
     nnx_ctx *ctx = &state->ctx;
 
-    if (state->error_status)
+    if (state->auto_options) {
+        nnx_dispatch_options(state->app, ctx, state->allowed_methods);
+    } else if (state->error_status) {
+        if (state->allowed_methods)
+            nnx_set_allow_header(ctx, state->allowed_methods);
         nnx_dispatch_error(state->app, ctx, state->error_status);
-    else
+    } else {
         nnx_dispatch(state->app, ctx, state->handler);
+    }
 
     if (!ctx->response_sent)
         nnx_dispatch_error(state->app, ctx, 500);
@@ -153,13 +160,24 @@ ngx_int_t nnx_nginx_handle_request(ngx_http_request_t *r, nnx_app *app,
     nnx_ctx_init(&state->ctx, r, adapter, method_name, path);
 
     if (nnx_method_from_nginx(r, &method) != 0) {
-        state->error_status = nnx_route_path_exists(app, path) ? 405 : 404;
+        state->allowed_methods = nnx_route_allowed_methods(app, path, &state->ctx);
+        state->error_status = state->allowed_methods ? 405 : 404;
         return nnx_dispatch_request(r, state);
     }
 
     state->handler = nnx_match_route(app, method, path, &state->ctx);
+    if (!state->handler && method == NNX_HEAD)
+        state->handler = nnx_match_route(app, NNX_GET, path, &state->ctx);
+
     if (!state->handler) {
-        state->error_status = nnx_route_path_exists(app, path) ? 405 : 404;
+        state->allowed_methods = nnx_route_allowed_methods(app, path, &state->ctx);
+        if (!state->allowed_methods) {
+            state->error_status = 404;
+        } else if (method == NNX_OPTIONS) {
+            state->auto_options = 1;
+        } else {
+            state->error_status = 405;
+        }
         return nnx_dispatch_request(r, state);
     }
 
