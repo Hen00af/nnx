@@ -93,12 +93,20 @@ int nnx_nginx_set_header(void *request, const char *name, const char *value)
     h = ngx_list_push(&r->headers_out.headers);
     if (!h) return -1;
     h->hash = 1;
-    h->key.data = ngx_pnalloc(r->pool, nl);
-    h->value.data = ngx_pnalloc(r->pool, vl);
-    if ((!h->key.data && nl) || (!h->value.data && vl)) return -1;
+    h->key.data = ngx_pnalloc(r->pool, nl ? nl : 1);
+    h->value.data = ngx_pnalloc(r->pool, vl ? vl : 1);
+    if (!h->key.data || !h->value.data) return -1;
     if (nl) ngx_memcpy(h->key.data, name, nl);
     if (vl) ngx_memcpy(h->value.data, value, vl);
     h->key.len = nl;
     h->value.len = vl;
+    return 0;
+}
+
+int nnx_nginx_log(void *request, const char *message)
+{
+    ngx_http_request_t *r = request;
+    if (!r || !message) return -1;
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "%s", message);
     return 0;
 }
