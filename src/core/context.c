@@ -21,6 +21,7 @@ void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
     ctx->group_middleware_index = 0;
     ctx->request_id[0] = 0;
     ctx->pending_error_status = 0;
+    ctx->value_count = 0;
 }
 
 void nnx_ctx_set_body(nnx_ctx *ctx, const void *body, size_t len)
@@ -192,6 +193,54 @@ const char *nnx_form(nnx_ctx *ctx, const char *name)
 
 const char *nnx_request_id(nnx_ctx *ctx)
 { return ctx && ctx->request_id[0] ? ctx->request_id : NULL; }
+
+const char *nnx_host(nnx_ctx *ctx)
+{ return nnx_header(ctx, "Host"); }
+
+const char *nnx_scheme(nnx_ctx *ctx)
+{
+    if (!ctx || !ctx->adapter || !ctx->adapter->scheme) return NULL;
+    return ctx->adapter->scheme(ctx->adapter_request);
+}
+
+const char *nnx_client_ip(nnx_ctx *ctx)
+{
+    if (!ctx || !ctx->adapter || !ctx->adapter->client_ip) return NULL;
+    return ctx->adapter->client_ip(ctx->adapter_request);
+}
+
+int nnx_ctx_set(nnx_ctx *ctx, const char *key, void *value)
+{
+    size_t i;
+    size_t n;
+
+    if (!ctx || !key || !*key) return -1;
+    n = strlen(key);
+    if (n >= NNX_VALUE_KEY_MAX) return -1;
+
+    for (i = 0; i < ctx->value_count; ++i) {
+        if (strcmp(ctx->values[i].key, key) == 0) {
+            ctx->values[i].value = value;
+            return 0;
+        }
+    }
+
+    if (ctx->value_count >= NNX_MAX_VALUES) return -1;
+    memcpy(ctx->values[ctx->value_count].key, key, n + 1);
+    ctx->values[ctx->value_count].value = value;
+    ++ctx->value_count;
+    return 0;
+}
+
+void *nnx_ctx_get(nnx_ctx *ctx, const char *key)
+{
+    size_t i;
+    if (!ctx || !key) return NULL;
+    for (i = 0; i < ctx->value_count; ++i)
+        if (strcmp(ctx->values[i].key, key) == 0)
+            return ctx->values[i].value;
+    return NULL;
+}
 
 const void *nnx_body(nnx_ctx *ctx, size_t *len)
 {
