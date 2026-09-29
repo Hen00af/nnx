@@ -18,6 +18,8 @@ void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
     ctx->endpoint = NULL;
     ctx->middleware_index = 0;
     ctx->group = NULL;
+    ctx->group_depth = 0;
+    ctx->group_index = 0;
     ctx->group_middleware_index = 0;
     ctx->request_id[0] = 0;
     ctx->pending_error_status = 0;
@@ -296,11 +298,15 @@ void nnx_next(nnx_ctx *ctx)
         entry->fn(ctx, entry->data);
         return;
     }
-    if (ctx->group &&
-        ctx->group_middleware_index < ctx->group->middleware_count) {
-        entry = &ctx->group->middleware[ctx->group_middleware_index++];
-        entry->fn(ctx, entry->data);
-        return;
+    while (ctx->group_index < ctx->group_depth) {
+        const nnx_group *group = ctx->group_chain[ctx->group_index];
+        if (ctx->group_middleware_index < group->middleware_count) {
+            entry = &group->middleware[ctx->group_middleware_index++];
+            entry->fn(ctx, entry->data);
+            return;
+        }
+        ++ctx->group_index;
+        ctx->group_middleware_index = 0;
     }
     if (ctx->endpoint) {
         nnx_handler endpoint = ctx->endpoint;
@@ -311,14 +317,41 @@ void nnx_next(nnx_ctx *ctx)
     }
 }
 
+static int nnx_build_group_chain(nnx_ctx *ctx)
+{
+    const nnx_group *group;
+    const nnx_group *reverse[NNX_MAX_GROUP_DEPTH];
+    size_t depth = 0;
+    size_t i;
+
+    ctx->group_depth = 0;
+    ctx->group_index = 0;
+    ctx->group_middleware_index = 0;
+
+    for (group = ctx->group; group; group = group->parent) {
+        if (depth >= NNX_MAX_GROUP_DEPTH) return -1;
+        reverse[depth++] = group;
+    }
+
+    for (i = 0; i < depth; ++i)
+        ctx->group_chain[i] = reverse[depth - i - 1];
+    ctx->group_depth = depth;
+    return 0;
+}
+
 void nnx_dispatch(nnx_app *app, nnx_ctx *ctx, nnx_handler endpoint)
 {
     if (!app || !ctx || !endpoint) return;
     ctx->app = app;
     ctx->endpoint = endpoint;
     ctx->middleware_index = 0;
-    ctx->group_middleware_index = 0;
     ctx->pending_error_status = 0;
+    if (nnx_build_group_chain(ctx) != 0) {
+        ctx->group = NULL;
+        ctx->group_depth = 0;
+        ctx->pending_error_status = 500;
+        ctx->endpoint = nnx_error_endpoint;
+    }
     nnx_next(ctx);
 }
 
@@ -326,6 +359,9 @@ void nnx_dispatch_error(nnx_app *app, nnx_ctx *ctx, int status)
 {
     if (!app || !ctx) return;
     ctx->group = NULL;
+    ctx->group_depth = 0;
+    ctx->group_index = 0;
+    ctx->group_middleware_index = 0;
     ctx->pending_error_status = status;
     ctx->app = app;
     ctx->endpoint = nnx_error_endpoint;
