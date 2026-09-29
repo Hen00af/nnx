@@ -4,8 +4,8 @@
 #include "../src/nnx_internal.h"
 
 static void handler(nnx_ctx *ctx) { (void)ctx; }
-static const char *nnx_adapter_query(nnx_ctx *ctx, const char *name) { (void)ctx; (void)name; return 0; }
-static const char *nnx_adapter_header(nnx_ctx *ctx, const char *name) { (void)ctx; (void)name; return 0; }
+const char *nnx_adapter_query(nnx_ctx *ctx, const char *name) { (void)ctx; (void)name; return 0; }
+const char *nnx_adapter_header(nnx_ctx *ctx, const char *name) { (void)ctx; (void)name; return 0; }
 
 int main(void)
 {
