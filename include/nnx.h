@@ -5,6 +5,7 @@
 
 typedef struct nnx_app nnx_app;
 typedef struct nnx_ctx nnx_ctx;
+typedef struct nnx_group nnx_group;
 typedef void (*nnx_handler)(nnx_ctx *ctx);
 typedef void (*nnx_middleware_fn)(nnx_ctx *ctx, void *data);
 
@@ -25,6 +26,17 @@ int nnx_delete(nnx_app *, const char *, nnx_handler);
 int nnx_head(nnx_app *, const char *, nnx_handler);
 int nnx_options(nnx_app *, const char *, nnx_handler);
 int nnx_any(nnx_app *, const char *, nnx_handler);
+
+nnx_group *nnx_group_new(nnx_app *, const char *prefix);
+int nnx_group_use(nnx_group *, nnx_middleware);
+int nnx_group_get(nnx_group *, const char *, nnx_handler);
+int nnx_group_post(nnx_group *, const char *, nnx_handler);
+int nnx_group_put(nnx_group *, const char *, nnx_handler);
+int nnx_group_patch(nnx_group *, const char *, nnx_handler);
+int nnx_group_delete(nnx_group *, const char *, nnx_handler);
+int nnx_group_head(nnx_group *, const char *, nnx_handler);
+int nnx_group_options(nnx_group *, const char *, nnx_handler);
+int nnx_group_any(nnx_group *, const char *, nnx_handler);
 
 int nnx_use(nnx_app *, nnx_middleware);
 void nnx_next(nnx_ctx *);
