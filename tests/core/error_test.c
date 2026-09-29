@@ -18,7 +18,7 @@ static int fake_send(void *request, int status, const char *type,
 }
 
 static const nnx_adapter fake = {
-    fake_send, NULL, NULL, NULL, NULL, NULL
+    fake_send, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
 static void empty_handler(nnx_ctx *ctx)
