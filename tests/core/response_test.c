@@ -72,9 +72,9 @@ int main(void)
     assert(strcmp(nnx_query(&ctx, "q"), "nnx") == 0);
     assert(strcmp(nnx_header(&ctx, "X-Test"), "yes") == 0);
 
-    nnx_ctx_set_body(&ctx, "name=Seiya+Hattori&lang=C%2B%2B", 35);
+    nnx_ctx_set_body(&ctx, "name=Seiya+Hattori&lang=C%2B%2B", 31);
     assert(nnx_body(&ctx, &body_len) != NULL);
-    assert(body_len == 35);
+    assert(body_len == 31);
     assert(strcmp(nnx_form(&ctx, "name"), "Seiya Hattori") == 0);
     assert(strcmp(nnx_form(&ctx, "lang"), "C++") == 0);
     assert(strcmp(nnx_cookie(&ctx, "session"), "abc123") == 0);
