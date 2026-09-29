@@ -13,6 +13,7 @@ int main(void)
 {
     nnx_app *app = nnx_new();
     nnx_group *api;
+    nnx_group *v1;
     nnx_ctx ctx = {0};
 
     assert(app);
@@ -25,6 +26,9 @@ int main(void)
     api = nnx_group_new(app, "/api");
     assert(api);
     assert(nnx_group_get(api, "/users/:id", group_h) == 0);
+    v1 = nnx_group_group(api, "/v1");
+    assert(v1);
+    assert(nnx_group_get(v1, "/posts/:id", group_h) == 0);
 
     assert(nnx_match_route(app, NNX_GET, "/users/me", &ctx) == static_h);
     assert(nnx_match_route(app, NNX_GET, "/users/42", &ctx) == param_h);
@@ -43,6 +47,10 @@ int main(void)
     assert(nnx_match_route(app, NNX_GET, "/api/users/99", &ctx) == group_h);
     assert(ctx.group == api);
     assert(strcmp(nnx_param(&ctx, "id"), "99") == 0);
+
+    assert(nnx_match_route(app, NNX_GET, "/api/v1/posts/7", &ctx) == group_h);
+    assert(ctx.group == v1);
+    assert(strcmp(nnx_param(&ctx, "id"), "7") == 0);
 
     nnx_free(app);
     return 0;
