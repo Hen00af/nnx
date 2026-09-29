@@ -35,7 +35,7 @@ static int nnx_method_from_nginx(ngx_http_request_t *r, nnx_method *m)
 
 int nnx_adapter_send(nnx_ctx *ctx, int status, const char *body)
 {
-    ngx_http_request_t *r; ngx_buf_t *b; ngx_chain_t out; size_t len; ngx_int_t rc;
+    ngx_http_request_t *r; ngx_buf_t *b; ngx_chain_t out; u_char *data; size_t len; ngx_int_t rc;
     if (!ctx || !ctx->native_request || !body) return -1;
     r = ctx->native_request; len = strlen(body);
     r->headers_out.status = status;
@@ -44,9 +44,12 @@ int nnx_adapter_send(nnx_ctx *ctx, int status, const char *body)
     rc = ngx_http_send_header(r);
     if (rc == NGX_ERROR || rc > NGX_OK) return -1;
     if (r->header_only) return 0;
+    data = ngx_pnalloc(r->pool, len);
+    if (!data && len != 0) return -1;
+    if (len != 0) ngx_memcpy(data, body, len);
     b = ngx_calloc_buf(r->pool);
     if (!b) return -1;
-    b->pos = (u_char *)body; b->last = (u_char *)body + len;
+    b->pos = data; b->last = data + len;
     b->memory = 1; b->last_buf = 1;
     out.buf = b; out.next = NULL;
     rc = ngx_http_output_filter(r, &out);
