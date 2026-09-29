@@ -14,6 +14,7 @@ typedef enum nnx_method {
 } nnx_method;
 
 typedef struct nnx_route { nnx_method method; char *path; nnx_handler handler; } nnx_route;
+typedef struct nnx_middleware_entry { nnx_middleware_fn fn; void *data; } nnx_middleware_entry;
 typedef struct nnx_param_pair {
     char name[NNX_PARAM_NAME_MAX];
     char value[NNX_PARAM_VALUE_MAX];
@@ -27,6 +28,9 @@ struct nnx_app {
     nnx_route *routes;
     size_t route_count;
     size_t route_capacity;
+    nnx_middleware_entry *middleware;
+    size_t middleware_count;
+    size_t middleware_capacity;
 };
 
 struct nnx_ctx {
@@ -37,10 +41,14 @@ struct nnx_ctx {
     nnx_param_pair params[NNX_MAX_PARAMS];
     size_t param_count;
     char wildcard[NNX_PARAM_VALUE_MAX];
+    const nnx_app *app;
+    nnx_handler endpoint;
+    size_t middleware_index;
 };
 
 int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *, nnx_ctx *);
 void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *);
+void nnx_dispatch(nnx_app *, nnx_ctx *, nnx_handler);
 
 #endif

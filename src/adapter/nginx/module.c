@@ -48,7 +48,7 @@ static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
     nnx_ctx_init(&ctx, r, &nnx_nginx_adapter);
     handler = nnx_match_route(nnx_active_app, method, path, &ctx);
     if (!handler) return NGX_HTTP_NOT_FOUND;
-    handler(&ctx);
+    nnx_dispatch(nnx_active_app, &ctx, handler);
     ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
         "[NNX] %V %V %i %Mms", &r->method_name, &r->uri,
         ctx.response_sent ? ctx.response_status : 500, ngx_current_msec - started);
