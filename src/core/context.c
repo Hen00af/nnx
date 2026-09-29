@@ -355,17 +355,31 @@ void nnx_dispatch(nnx_app *app, nnx_ctx *ctx, nnx_handler endpoint)
     nnx_next(ctx);
 }
 
+static void nnx_options_endpoint(nnx_ctx *ctx)
+{
+    nnx_text(ctx, 204, "");
+}
+
 void nnx_dispatch_error(nnx_app *app, nnx_ctx *ctx, int status)
 {
     if (!app || !ctx) return;
-    ctx->group = NULL;
-    ctx->group_depth = 0;
-    ctx->group_index = 0;
-    ctx->group_middleware_index = 0;
     ctx->pending_error_status = status;
     ctx->app = app;
     ctx->endpoint = nnx_error_endpoint;
     ctx->middleware_index = 0;
-    ctx->group_middleware_index = 0;
+    if (nnx_build_group_chain(ctx) != 0) {
+        ctx->group = NULL;
+        ctx->group_depth = 0;
+    }
     nnx_next(ctx);
+}
+
+void nnx_dispatch_options(nnx_app *app, nnx_ctx *ctx, unsigned methods)
+{
+    if (!app || !ctx) return;
+    if (nnx_set_allow_header(ctx, methods) != 0) {
+        nnx_dispatch_error(app, ctx, 500);
+        return;
+    }
+    nnx_dispatch(app, ctx, nnx_options_endpoint);
 }
