@@ -40,11 +40,17 @@ static int fake_set_header(void *request, const char *name, const char *value)
     return 0;
 }
 
+static int fake_log(void *request, const char *message)
+{
+    (void)request; (void)message;
+    return 0;
+}
+
 int main(void)
 {
     nnx_ctx ctx;
     const nnx_adapter fake = {
-        fake_send, fake_query, fake_header, fake_set_header
+        fake_send, fake_query, fake_header, fake_set_header, fake_log
     };
 
     nnx_ctx_init(&ctx, NULL, &fake, "GET", "/hello");
