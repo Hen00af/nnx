@@ -5,7 +5,7 @@
 typedef enum nnx_method { NNX_GET, NNX_POST } nnx_method;
 typedef struct nnx_route { nnx_method method; char *path; nnx_handler handler; } nnx_route;
 struct nnx_app { nnx_route *routes; size_t route_count; size_t route_capacity; };
-struct nnx_ctx { void *native_request; int response_sent; };
+struct nnx_ctx { void *native_request; int response_sent; int response_status; };
 int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *);
 int nnx_adapter_send(nnx_ctx *, int, const char *);
