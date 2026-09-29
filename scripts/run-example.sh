@@ -20,7 +20,7 @@ error_log stderr notice;
 pid logs/nginx.pid;
 events { worker_connections 1024; }
 http {
-    access_log off;
+    access_log /dev/stdout;
     server {
         listen 127.0.0.1:8080;
         location / { nnx; }

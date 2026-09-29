@@ -58,7 +58,8 @@ int nnx_adapter_send(nnx_ctx *ctx, int status, const char *body)
 
 static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
 {
-    nnx_method method; nnx_handler handler; nnx_ctx ctx; char *path;
+    nnx_method method; nnx_handler handler; nnx_ctx ctx; char *path; ngx_msec_t started;
+    started = ngx_current_msec;
     if (!nnx_active_app) return NGX_HTTP_INTERNAL_SERVER_ERROR;
     if (nnx_method_from_nginx(r, &method) != 0) return NGX_HTTP_NOT_ALLOWED;
     path = ngx_pnalloc(r->pool, r->uri.len + 1);
@@ -66,8 +67,13 @@ static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
     ngx_memcpy(path, r->uri.data, r->uri.len); path[r->uri.len] = '\0';
     handler = nnx_match_route(nnx_active_app, method, path);
     if (!handler) return NGX_HTTP_NOT_FOUND;
-    ctx.native_request = r; ctx.response_sent = 0;
+    ctx.native_request = r; ctx.response_sent = 0; ctx.response_status = 0;
     handler(&ctx);
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+        "[NNX] %V %V %i %Mms",
+        &r->method_name, &r->uri,
+        ctx.response_sent ? ctx.response_status : 500,
+        ngx_current_msec - started);
     return ctx.response_sent ? NGX_OK : NGX_HTTP_INTERNAL_SERVER_ERROR;
 }
 
