@@ -15,6 +15,24 @@ typedef struct nnx_middleware {
     void (*destroy)(void *data);
 } nnx_middleware;
 
+typedef enum nnx_same_site {
+    NNX_SAME_SITE_DEFAULT = 0,
+    NNX_SAME_SITE_LAX,
+    NNX_SAME_SITE_STRICT,
+    NNX_SAME_SITE_NONE
+} nnx_same_site;
+
+typedef struct nnx_cookie_config {
+    const char *name;
+    const char *value;
+    const char *path;
+    const char *domain;
+    int max_age;
+    int secure;
+    int http_only;
+    nnx_same_site same_site;
+} nnx_cookie_config;
+
 nnx_app *nnx_new(void);
 void nnx_free(nnx_app *app);
 
@@ -57,6 +75,7 @@ int nnx_status(nnx_ctx *);
 int nnx_log(nnx_ctx *, const char *message);
 
 int nnx_set_header(nnx_ctx *, const char *name, const char *value);
+int nnx_set_cookie(nnx_ctx *, const nnx_cookie_config *cookie);
 int nnx_send(nnx_ctx *, int status, const char *body);
 int nnx_text(nnx_ctx *, int status, const char *body);
 int nnx_json(nnx_ctx *, int status, const char *json);
