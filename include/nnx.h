@@ -36,6 +36,8 @@ const char *nnx_wildcard(nnx_ctx *);
 const char *nnx_query(nnx_ctx *, const char *name);
 const char *nnx_header(nnx_ctx *, const char *name);
 const char *nnx_request_id(nnx_ctx *);
+const void *nnx_body(nnx_ctx *, size_t *len);
+const char *nnx_body_text(nnx_ctx *);
 int nnx_status(nnx_ctx *);
 int nnx_log(nnx_ctx *, const char *message);
 
