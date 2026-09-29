@@ -87,6 +87,18 @@ int main(void)
     assert(memcmp(body_seen, "{\"ok\":true}", len_seen) == 0);
     assert(nnx_text(&ctx, 200, "twice") == -1);
 
+    nnx_ctx_init(&ctx, NULL, &fake, "GET", "/cookie");
+    assert(nnx_set_cookie(&ctx, &(nnx_cookie_config){
+        "session", "abc123", "/", NULL, 3600, 1, 1, NNX_SAME_SITE_LAX
+    }) == 0);
+    assert(strcmp(header_name_seen, "Set-Cookie") == 0);
+    assert(strcmp(header_value_seen,
+        "session=abc123; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Lax") == 0);
+
+    assert(nnx_set_cookie(&ctx, &(nnx_cookie_config){
+        "bad", "value", "/", NULL, 0, 0, 0, NNX_SAME_SITE_NONE
+    }) == -1);
+
     nnx_ctx_init(&ctx, NULL, &fake, "GET", "/old");
     assert(nnx_redirect(&ctx, 302, "/new") == 0);
     assert(strcmp(header_name_seen, "Location") == 0);
