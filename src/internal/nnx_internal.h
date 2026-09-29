@@ -7,6 +7,8 @@
 #define NNX_MAX_PARAMS 16
 #define NNX_PARAM_NAME_MAX 64
 #define NNX_PARAM_VALUE_MAX 256
+#define NNX_MAX_VALUES 16
+#define NNX_VALUE_KEY_MAX 64
 
 typedef enum nnx_method {
     NNX_GET, NNX_POST, NNX_PUT, NNX_PATCH,
@@ -40,6 +42,11 @@ typedef struct nnx_param_pair {
     char value[NNX_PARAM_VALUE_MAX];
 } nnx_param_pair;
 
+typedef struct nnx_value_pair {
+    char key[NNX_VALUE_KEY_MAX];
+    void *value;
+} nnx_value_pair;
+
 typedef struct nnx_adapter {
     int (*send)(void *request, int status, const char *content_type,
                 const void *body, size_t len);
@@ -48,6 +55,8 @@ typedef struct nnx_adapter {
     int (*set_header)(void *request, const char *name, const char *value);
     int (*log)(void *request, const char *message);
     void *(*alloc)(void *request, size_t size);
+    const char *(*client_ip)(void *request);
+    const char *(*scheme)(void *request);
 } nnx_adapter;
 
 struct nnx_app {
@@ -80,6 +89,8 @@ struct nnx_ctx {
     size_t group_middleware_index;
     char request_id[64];
     int pending_error_status;
+    nnx_value_pair values[NNX_MAX_VALUES];
+    size_t value_count;
 };
 
 int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
