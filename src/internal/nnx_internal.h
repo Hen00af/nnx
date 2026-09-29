@@ -9,6 +9,7 @@
 #define NNX_PARAM_VALUE_MAX 256
 #define NNX_MAX_VALUES 16
 #define NNX_VALUE_KEY_MAX 64
+#define NNX_MAX_GROUP_DEPTH 8
 
 typedef enum nnx_method {
     NNX_GET, NNX_POST, NNX_PUT, NNX_PATCH,
@@ -23,6 +24,7 @@ typedef struct nnx_middleware_entry {
 
 struct nnx_group {
     nnx_app *app;
+    struct nnx_group *parent;
     char *prefix;
     nnx_middleware_entry *middleware;
     size_t middleware_count;
@@ -86,6 +88,9 @@ struct nnx_ctx {
     nnx_handler endpoint;
     size_t middleware_index;
     const nnx_group *group;
+    const nnx_group *group_chain[NNX_MAX_GROUP_DEPTH];
+    size_t group_depth;
+    size_t group_index;
     size_t group_middleware_index;
     char request_id[64];
     int pending_error_status;
