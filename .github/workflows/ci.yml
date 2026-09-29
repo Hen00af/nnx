@@ -38,6 +38,16 @@ jobs:
           curl -fsS -X POST             -H 'Content-Type: text/plain'             --data 'body-through-nginx'             http://127.0.0.1:8080/echo > /tmp/nnx-echo
           grep -qx 'body-through-nginx' /tmp/nnx-echo
 
+          curl -sS -D /tmp/nnx-404-headers             -o /tmp/nnx-404-body             http://127.0.0.1:8080/missing
+          grep -q 'HTTP/1.1 404' /tmp/nnx-404-headers
+          grep -qi '^X-Request-ID:' /tmp/nnx-404-headers
+          grep -qx 'Not Found' /tmp/nnx-404-body
+
+          curl -sS -D /tmp/nnx-405-headers             -o /tmp/nnx-405-body             http://127.0.0.1:8080/echo
+          grep -q 'HTTP/1.1 405' /tmp/nnx-405-headers
+          grep -qi '^X-Request-ID:' /tmp/nnx-405-headers
+          grep -qx 'Method Not Allowed' /tmp/nnx-405-body
+
       - name: Show Nginx log on failure
         if: failure()
         run: cat /tmp/nnx-nginx.log || true
