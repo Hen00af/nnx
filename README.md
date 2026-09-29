@@ -1,80 +1,95 @@
 # nnx
 
-Experimental Echo-like C web framework running directly as an Nginx HTTP module.
+Experimental Echo-like C web framework running directly inside an Nginx HTTP module.
 
-Nginx is an external dependency; its source is not vendored into this repository.
-
-## Application
+## Example
 
 ```c
+#include <stdio.h>
 #include <nnx.h>
 
-static void hello(nnx_ctx *ctx)
+static void hello(nnx_ctx *c)
 {
-    nnx_send(ctx, 200, "Hello, nnx!\n");
+    nnx_text(c, 200, "Hello, nnx!\n");
+}
+
+static void user(nnx_ctx *c)
+{
+    const char *id = nnx_param(c, "id");
+    char out[128];
+    snprintf(out, sizeof(out), "{\"id\":\"%s\"}\n", id);
+    nnx_json(c, 200, out);
 }
 
 int nnx_register(nnx_app *app)
 {
-    return nnx_get(app, "/", hello);
+    nnx_get(app, "/", hello);
+    nnx_get(app, "/users/:id", user);
+    return 0;
 }
 ```
 
-The registration hook executes inside each Nginx worker. That is important:
-ordinary C handler function pointers remain in the same process/address space.
+## Current API
 
-## Request path
+Routing:
+- `nnx_get`, `nnx_post`
+- static routes and `:param` segments
+- static routes take priority over parameter routes
 
-```text
-Nginx socket/event loop
-  -> ngx_http_request_t
-  -> nnx adapter
-  -> nnx router
-  -> user C handler
-  -> nnx_send
-  -> Nginx output filter
-```
+Request:
+- `nnx_param(ctx, "id")`
+- `nnx_query(ctx, "q")`
+- `nnx_header(ctx, "Authorization")`
+- `nnx_method_name(ctx)`
+- `nnx_path(ctx)`
 
-No `ngx_*` type appears in application code.
+Response:
+- `nnx_text(ctx, status, body)`
+- `nnx_json(ctx, status, json)`
+- `nnx_send` remains an alias for text responses
 
-## Build and run the hello app
+Middleware:
+- `nnx_use(app, before, after)`
+- before hooks run in registration order
+- after hooks run in reverse order
+- a before hook may short-circuit by sending a response
 
-Use Nginx source compatible with the Nginx binary/module you intend to run:
+## Run
 
 ```sh
 ./scripts/run-example.sh /path/to/nginx-source
 ```
 
-Then:
+Then try:
 
 ```sh
 curl http://127.0.0.1:8080/
-# Hello, nnx!
+curl http://127.0.0.1:8080/users/42
+curl 'http://127.0.0.1:8080/search?q=nginx'
 ```
 
-For a custom app:
+## Architecture
 
-```sh
-./scripts/build-app-module.sh /path/to/nginx-source ./my_app.c
+```text
+Nginx event loop
+  -> nnx adapter
+  -> middleware(before)
+  -> router
+  -> C handler
+  -> middleware(after)
+  -> nnx response
+  -> Nginx output filter
 ```
 
-## Why not pass nnx_app through exec?
+Nginx is external and is not vendored. Application code is compiled into the
+Nginx module so handler pointers live in the Nginx worker address space.
 
-`exec()` replaces the process image, so an in-memory router and its C function
-pointers cannot be handed to a stock external Nginx process. nnx solves this
-without a reverse proxy: application registration is compiled into the Nginx
-dynamic module and initialized in the Nginx worker lifecycle.
+## Deliberate limitation: request bodies
 
-## Current scope
+Nginx request-body reading is asynchronous and callback-driven. nnx does not
+currently expose a fake synchronous `nnx_body()` that would block or violate
+the Nginx event model. Body parsing will be added together with an explicit
+async/request-lifecycle design.
 
-- GET and POST route registration
-- exact path matching
-- plain-text responses
-- 404 / 405 handling through Nginx
-- worker-local app lifecycle
-- dynamic-module build helper
-- standalone example runner
-
-Blocking I/O inside a handler will block that Nginx worker. Async I/O,
-parameters, request bodies, headers, middleware, TLS helpers and production
-packaging are future work.
+See `docs/adr/0001-runtime-model.md` for the executable/process-boundary
+decision.
