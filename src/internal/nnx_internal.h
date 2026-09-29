@@ -58,6 +58,7 @@ struct nnx_app {
     size_t middleware_count;
     size_t middleware_capacity;
     nnx_group *groups;
+    nnx_error_handler error_handler;
 };
 
 struct nnx_ctx {
@@ -78,14 +79,17 @@ struct nnx_ctx {
     const nnx_group *group;
     size_t group_middleware_index;
     char request_id[64];
+    int pending_error_status;
 };
 
 int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
 int nnx_add_group_route(nnx_group *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *, nnx_ctx *);
+int nnx_route_path_exists(const nnx_app *, const char *);
 void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *,
                   const char *method_name, const char *path);
 void nnx_ctx_set_body(nnx_ctx *, const void *body, size_t len);
 void nnx_dispatch(nnx_app *, nnx_ctx *, nnx_handler);
+void nnx_dispatch_error(nnx_app *, nnx_ctx *, int status);
 
 #endif
