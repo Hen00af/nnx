@@ -9,12 +9,21 @@ void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
     ctx->response_status = 0;
     ctx->method_name = method_name;
     ctx->path = path;
+    ctx->body = NULL;
+    ctx->body_len = 0;
     ctx->param_count = 0;
     ctx->wildcard[0] = 0;
     ctx->app = NULL;
     ctx->endpoint = NULL;
     ctx->middleware_index = 0;
     ctx->request_id[0] = 0;
+}
+
+void nnx_ctx_set_body(nnx_ctx *ctx, const void *body, size_t len)
+{
+    if (!ctx) return;
+    ctx->body = body;
+    ctx->body_len = len;
 }
 
 const char *nnx_method_name(nnx_ctx *ctx)
@@ -37,6 +46,18 @@ const char *nnx_header(nnx_ctx *ctx, const char *name)
 
 const char *nnx_request_id(nnx_ctx *ctx)
 { return ctx && ctx->request_id[0] ? ctx->request_id : NULL; }
+
+const void *nnx_body(nnx_ctx *ctx, size_t *len)
+{
+    if (len) *len = ctx ? ctx->body_len : 0;
+    return ctx ? ctx->body : NULL;
+}
+
+const char *nnx_body_text(nnx_ctx *ctx)
+{
+    static const char empty[] = "";
+    return ctx && ctx->body ? (const char *)ctx->body : empty;
+}
 
 int nnx_status(nnx_ctx *ctx)
 { return ctx ? ctx->response_status : 0; }
