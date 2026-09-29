@@ -9,6 +9,7 @@ const char *nnx_nginx_query(void *request, const char *name);
 const char *nnx_nginx_header(void *request, const char *name);
 int nnx_nginx_set_header(void *request, const char *name, const char *value);
 int nnx_nginx_log(void *request, const char *message);
+void *nnx_nginx_alloc(void *request, size_t size);
 ngx_int_t nnx_nginx_handle_request(ngx_http_request_t *r, nnx_app *app,
                                    const nnx_adapter *adapter);
 
@@ -18,7 +19,8 @@ static const nnx_adapter nnx_nginx_adapter = {
     nnx_nginx_query,
     nnx_nginx_header,
     nnx_nginx_set_header,
-    nnx_nginx_log
+    nnx_nginx_log,
+    nnx_nginx_alloc
 };
 
 static ngx_int_t nnx_init_process(ngx_cycle_t *cycle)
