@@ -4,11 +4,13 @@
 #include <nnx.h>
 
 #define NNX_MAX_PARAMS 16
+#define NNX_PARAM_NAME_MAX 64
+#define NNX_PARAM_VALUE_MAX 256
 
 typedef enum nnx_method { NNX_GET, NNX_POST } nnx_method;
 typedef struct nnx_route { nnx_method method; char *path; nnx_handler handler; } nnx_route;
 typedef struct nnx_middleware_pair { nnx_middleware before; nnx_middleware after; } nnx_middleware_pair;
-typedef struct nnx_param_pair { char *name; char *value; } nnx_param_pair;
+typedef struct nnx_param_pair { char name[NNX_PARAM_NAME_MAX]; char value[NNX_PARAM_VALUE_MAX]; } nnx_param_pair;
 
 struct nnx_app {
     nnx_route *routes;

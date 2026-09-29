@@ -88,15 +88,6 @@ const char *nnx_adapter_header(nnx_ctx *ctx, const char *name)
     return NULL;
 }
 
-static void nnx_free_ctx_params(nnx_ctx *ctx)
-{
-    size_t i;
-    for (i = 0; i < ctx->param_count; ++i) {
-        free(ctx->params[i].name); free(ctx->params[i].value);
-    }
-    ctx->param_count = 0;
-}
-
 static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
 {
     nnx_method method; nnx_handler handler; nnx_ctx ctx = {0};
@@ -124,7 +115,6 @@ static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
     ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
         "[NNX] %V %V %i %Mms", &r->method_name, &r->uri,
         ctx.response_sent ? ctx.response_status : 500, ngx_current_msec - started);
-    nnx_free_ctx_params(&ctx);
     return ctx.response_sent ? NGX_OK : NGX_HTTP_INTERNAL_SERVER_ERROR;
 }
 

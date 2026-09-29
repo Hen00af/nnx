@@ -41,9 +41,7 @@ static int nnx_route_match(const char *pattern, const char *path, nnx_ctx *ctx)
             while (*s && *s != '/') ++s;
             nl = (size_t)(p - name); vl = (size_t)(s - value);
             if (!nl || !vl || ctx->param_count >= NNX_MAX_PARAMS) return 0;
-            ctx->params[ctx->param_count].name = malloc(nl + 1);
-            ctx->params[ctx->param_count].value = malloc(vl + 1);
-            if (!ctx->params[ctx->param_count].name || !ctx->params[ctx->param_count].value) return 0;
+            if (nl >= NNX_PARAM_NAME_MAX || vl >= NNX_PARAM_VALUE_MAX) return 0;
             memcpy(ctx->params[ctx->param_count].name, name, nl);
             ctx->params[ctx->param_count].name[nl] = 0;
             memcpy(ctx->params[ctx->param_count].value, value, vl);
@@ -59,11 +57,6 @@ static int nnx_route_match(const char *pattern, const char *path, nnx_ctx *ctx)
 
 static void nnx_clear_params(nnx_ctx *ctx)
 {
-    size_t i;
-    for (i = 0; i < ctx->param_count; ++i) {
-        free(ctx->params[i].name); free(ctx->params[i].value);
-        ctx->params[i].name = NULL; ctx->params[i].value = NULL;
-    }
     ctx->param_count = 0;
 }
 
