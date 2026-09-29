@@ -16,6 +16,9 @@ typedef enum nnx_method {
     NNX_DELETE, NNX_HEAD, NNX_OPTIONS, NNX_METHOD_ANY
 } nnx_method;
 
+#define NNX_METHOD_BIT(method) (1u << (unsigned)(method))
+#define NNX_ALL_METHOD_BITS ((1u << (unsigned)NNX_METHOD_ANY) - 1u)
+
 typedef struct nnx_middleware_entry {
     nnx_middleware_fn fn;
     void *data;
@@ -102,10 +105,13 @@ int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
 int nnx_add_group_route(nnx_group *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *, nnx_ctx *);
 int nnx_route_path_exists(const nnx_app *, const char *);
+unsigned nnx_route_allowed_methods(const nnx_app *, const char *, nnx_ctx *);
+int nnx_set_allow_header(nnx_ctx *, unsigned methods);
 void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *,
                   const char *method_name, const char *path);
 void nnx_ctx_set_body(nnx_ctx *, const void *body, size_t len);
 void nnx_dispatch(nnx_app *, nnx_ctx *, nnx_handler);
 void nnx_dispatch_error(nnx_app *, nnx_ctx *, int status);
+void nnx_dispatch_options(nnx_app *, nnx_ctx *, unsigned methods);
 
 #endif
