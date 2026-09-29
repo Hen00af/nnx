@@ -1,11 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
-#include "nnx_internal.h"
+#include "../internal/nnx_internal.h"
 
 static char *nnx_strdup(const char *s)
 {
-    size_t n;
-    char *p;
+    size_t n; char *p;
     if (!s) return NULL;
     n = strlen(s) + 1;
     p = malloc(n);
@@ -15,15 +14,13 @@ static char *nnx_strdup(const char *s)
 
 int nnx_add_route(nnx_app *app, nnx_method method, const char *path, nnx_handler h)
 {
-    nnx_route *routes;
-    size_t cap;
+    nnx_route *routes; size_t cap;
     if (!app || !path || path[0] != '/' || !h) return -1;
     if (app->route_count == app->route_capacity) {
         cap = app->route_capacity ? app->route_capacity * 2 : 8;
         routes = realloc(app->routes, cap * sizeof(*routes));
         if (!routes) return -1;
-        app->routes = routes;
-        app->route_capacity = cap;
+        app->routes = routes; app->route_capacity = cap;
     }
     app->routes[app->route_count].path = nnx_strdup(path);
     if (!app->routes[app->route_count].path) return -1;

@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "nnx_internal.h"
+#include "../internal/nnx_internal.h"
 
 nnx_app *nnx_new(void) { return calloc(1, sizeof(nnx_app)); }
 
