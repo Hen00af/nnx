@@ -93,21 +93,59 @@ int nnx_use(nnx_app *app, nnx_middleware middleware)
                               &app->middleware_capacity, middleware);
 }
 
-nnx_group *nnx_group_new(nnx_app *app, const char *prefix)
+static char *nnx_join_prefix(const char *parent, const char *child)
+{
+    size_t pl, cl, skip = 0;
+    char *out;
+
+    if (!child || child[0] != '/') return NULL;
+    if (!parent) return nnx_app_strdup(child);
+
+    pl = strlen(parent);
+    cl = strlen(child);
+    if (pl == 1 && parent[0] == '/') pl = 0;
+    else if (pl > 1 && parent[pl - 1] == '/') skip = 1;
+
+    out = malloc(pl + cl + 1);
+    if (!out) return NULL;
+    if (pl) memcpy(out, parent, pl);
+    memcpy(out + pl, child + skip, cl - skip + 1);
+    return out;
+}
+
+static nnx_group *nnx_create_group(nnx_app *app, nnx_group *parent,
+                                    const char *prefix)
 {
     nnx_group *group;
+    char *full;
+
     if (!app || !prefix || prefix[0] != '/') return NULL;
+    full = nnx_join_prefix(parent ? parent->prefix : NULL, prefix);
+    if (!full) return NULL;
+
     group = calloc(1, sizeof(*group));
-    if (!group) return NULL;
-    group->prefix = nnx_app_strdup(prefix);
-    if (!group->prefix) {
-        free(group);
+    if (!group) {
+        free(full);
         return NULL;
     }
+
     group->app = app;
+    group->parent = parent;
+    group->prefix = full;
     group->next = app->groups;
     app->groups = group;
     return group;
+}
+
+nnx_group *nnx_group_new(nnx_app *app, const char *prefix)
+{
+    return nnx_create_group(app, NULL, prefix);
+}
+
+nnx_group *nnx_group_group(nnx_group *parent, const char *prefix)
+{
+    if (!parent) return NULL;
+    return nnx_create_group(parent->app, parent, prefix);
 }
 
 int nnx_group_use(nnx_group *group, nnx_middleware middleware)
