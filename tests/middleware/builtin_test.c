@@ -122,6 +122,34 @@ static void test_cors_preflight(void)
     nnx_free(app);
 }
 
+static void test_secure_headers(void)
+{
+    nnx_app *app = nnx_new();
+    nnx_ctx ctx;
+    nnx_secure_config config = {0};
+
+    reset_state();
+    assert(app);
+    config.hsts_max_age = 31536000;
+    config.hsts_include_subdomains = 1;
+    config.hsts_preload = 1;
+    config.content_security_policy = "default-src 'self'";
+
+    assert(nnx_use(app, nnx_secure(config)) == 0);
+    nnx_ctx_init(&ctx, NULL, &fake, "GET", "/secure");
+    nnx_dispatch(app, &ctx, ok_endpoint);
+
+    assert(endpoint_calls == 1);
+    assert(status_seen == 200);
+    assert(has_header("X-Content-Type-Options", "nosniff"));
+    assert(has_header("X-Frame-Options", "SAMEORIGIN"));
+    assert(has_header("Referrer-Policy", "no-referrer"));
+    assert(has_header("Content-Security-Policy", "default-src 'self'"));
+    assert(has_header("Strict-Transport-Security",
+                      "max-age=31536000; includeSubDomains; preload"));
+    nnx_free(app);
+}
+
 static void test_basic_auth(void)
 {
     nnx_app *app;
@@ -156,6 +184,7 @@ int main(void)
 {
     test_request_id_and_logger();
     test_cors_preflight();
+    test_secure_headers();
     test_basic_auth();
     return 0;
 }
