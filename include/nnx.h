@@ -7,6 +7,7 @@ typedef struct nnx_app nnx_app;
 typedef struct nnx_ctx nnx_ctx;
 typedef struct nnx_group nnx_group;
 typedef void (*nnx_handler)(nnx_ctx *ctx);
+typedef void (*nnx_error_handler)(nnx_ctx *ctx, int status);
 typedef void (*nnx_middleware_fn)(nnx_ctx *ctx, void *data);
 
 typedef struct nnx_middleware {
@@ -35,6 +36,7 @@ typedef struct nnx_cookie_config {
 
 nnx_app *nnx_new(void);
 void nnx_free(nnx_app *app);
+void nnx_set_error_handler(nnx_app *app, nnx_error_handler handler);
 
 int nnx_get(nnx_app *, const char *, nnx_handler);
 int nnx_post(nnx_app *, const char *, nnx_handler);
