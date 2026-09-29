@@ -3,10 +3,19 @@
 #include <ngx_http.h>
 #include "../../internal/nnx_internal.h"
 
-int nnx_nginx_send(void *request, int status, const char *body);
+int nnx_nginx_send(void *request, int status, const char *content_type,
+                   const void *body, size_t len);
+const char *nnx_nginx_query(void *request, const char *name);
+const char *nnx_nginx_header(void *request, const char *name);
+int nnx_nginx_set_header(void *request, const char *name, const char *value);
 
 static nnx_app *nnx_active_app;
-static const nnx_adapter nnx_nginx_adapter = { nnx_nginx_send };
+static const nnx_adapter nnx_nginx_adapter = {
+    nnx_nginx_send,
+    nnx_nginx_query,
+    nnx_nginx_header,
+    nnx_nginx_set_header
+};
 
 static ngx_int_t nnx_init_process(ngx_cycle_t *cycle)
 {
@@ -45,7 +54,13 @@ static ngx_int_t nnx_http_handler(ngx_http_request_t *r)
     path = ngx_pnalloc(r->pool, r->uri.len + 1);
     if (!path) return NGX_HTTP_INTERNAL_SERVER_ERROR;
     ngx_memcpy(path, r->uri.data, r->uri.len); path[r->uri.len] = 0;
-    nnx_ctx_init(&ctx, r, &nnx_nginx_adapter);
+    {
+        char *method_name = ngx_pnalloc(r->pool, r->method_name.len + 1);
+        if (!method_name) return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        ngx_memcpy(method_name, r->method_name.data, r->method_name.len);
+        method_name[r->method_name.len] = 0;
+        nnx_ctx_init(&ctx, r, &nnx_nginx_adapter, method_name, path);
+    }
     handler = nnx_match_route(nnx_active_app, method, path, &ctx);
     if (!handler) return NGX_HTTP_NOT_FOUND;
     nnx_dispatch(nnx_active_app, &ctx, handler);

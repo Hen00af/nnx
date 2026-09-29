@@ -21,7 +21,11 @@ typedef struct nnx_param_pair {
 } nnx_param_pair;
 
 typedef struct nnx_adapter {
-    int (*send)(void *request, int status, const char *body);
+    int (*send)(void *request, int status, const char *content_type,
+                const void *body, size_t len);
+    const char *(*query)(void *request, const char *name);
+    const char *(*header)(void *request, const char *name);
+    int (*set_header)(void *request, const char *name, const char *value);
 } nnx_adapter;
 
 struct nnx_app {
@@ -38,6 +42,8 @@ struct nnx_ctx {
     const nnx_adapter *adapter;
     int response_sent;
     int response_status;
+    const char *method_name;
+    const char *path;
     nnx_param_pair params[NNX_MAX_PARAMS];
     size_t param_count;
     char wildcard[NNX_PARAM_VALUE_MAX];
@@ -48,7 +54,8 @@ struct nnx_ctx {
 
 int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *, nnx_ctx *);
-void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *);
+void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *,
+                  const char *method_name, const char *path);
 void nnx_dispatch(nnx_app *, nnx_ctx *, nnx_handler);
 
 #endif
