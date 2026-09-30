@@ -6,7 +6,7 @@ CORE = src/core/app.c src/core/context.c src/core/response.c
 ROUTER = src/router/router.c
 MIDDLEWARE = src/middleware/builtin.c
 
-.PHONY: all test clean
+.PHONY: all test integration clean
 
 all: test
 
@@ -34,3 +34,8 @@ test: tests/router/router_test tests/core/response_test tests/core/middleware_te
 
 clean:
 	rm -f tests/router/router_test tests/core/response_test tests/core/middleware_test tests/core/error_test tests/middleware/builtin_test
+
+
+integration:
+	@test -n "$(NGINX_SRC)" || (echo "usage: make integration NGINX_SRC=/path/to/nginx-source" >&2; exit 2)
+	./scripts/integration-test.sh "$(NGINX_SRC)"
