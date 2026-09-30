@@ -254,3 +254,92 @@ nnx_middleware nnx_basic_auth(nnx_basic_auth_config config)
     out.destroy = basic_auth_destroy;
     return out;
 }
+
+typedef struct nnx_secure_state {
+    char *frame;
+    char *referrer;
+    char *csp;
+    int nosniff;
+    long hsts_max_age;
+    int hsts_include_subdomains;
+    int hsts_preload;
+} nnx_secure_state;
+
+static void secure_destroy(void *data)
+{
+    nnx_secure_state *state = data;
+    if (!state) return;
+    free(state->frame);
+    free(state->referrer);
+    free(state->csp);
+    free(state);
+}
+
+static void secure_middleware(nnx_ctx *ctx, void *data)
+{
+    nnx_secure_state *state = data;
+    char hsts[256];
+    int n;
+
+    if (!state) {
+        nnx_next(ctx);
+        return;
+    }
+
+    if (state->nosniff)
+        nnx_set_header(ctx, "X-Content-Type-Options", "nosniff");
+    if (state->frame)
+        nnx_set_header(ctx, "X-Frame-Options", state->frame);
+    if (state->referrer)
+        nnx_set_header(ctx, "Referrer-Policy", state->referrer);
+    if (state->csp)
+        nnx_set_header(ctx, "Content-Security-Policy", state->csp);
+
+    if (state->hsts_max_age > 0) {
+        n = snprintf(hsts, sizeof(hsts), "max-age=%ld", state->hsts_max_age);
+        if (n > 0 && (size_t)n < sizeof(hsts)) {
+            if (state->hsts_include_subdomains &&
+                (size_t)n + sizeof("; includeSubDomains") < sizeof(hsts)) {
+                strcat(hsts, "; includeSubDomains");
+            }
+            if (state->hsts_preload &&
+                strlen(hsts) + sizeof("; preload") < sizeof(hsts)) {
+                strcat(hsts, "; preload");
+            }
+            nnx_set_header(ctx, "Strict-Transport-Security", hsts);
+        }
+    }
+
+    nnx_next(ctx);
+}
+
+nnx_middleware nnx_secure(nnx_secure_config config)
+{
+    nnx_middleware bad = { NULL, NULL, NULL };
+    nnx_middleware out;
+    nnx_secure_state *state = calloc(1, sizeof(*state));
+    if (!state) return bad;
+
+    state->frame = nnx_mw_strdup(config.x_frame_options ?
+        config.x_frame_options : "SAMEORIGIN");
+    state->referrer = nnx_mw_strdup(config.referrer_policy ?
+        config.referrer_policy : "no-referrer");
+    if (config.content_security_policy)
+        state->csp = nnx_mw_strdup(config.content_security_policy);
+    state->nosniff = config.content_type_nosniff == 0 ? 1 :
+                     config.content_type_nosniff > 0;
+    state->hsts_max_age = config.hsts_max_age;
+    state->hsts_include_subdomains = config.hsts_include_subdomains;
+    state->hsts_preload = config.hsts_preload;
+
+    if (!state->frame || !state->referrer ||
+        (config.content_security_policy && !state->csp)) {
+        secure_destroy(state);
+        return bad;
+    }
+
+    out.fn = secure_middleware;
+    out.data = state;
+    out.destroy = secure_destroy;
+    return out;
+}
