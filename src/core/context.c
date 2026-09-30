@@ -17,6 +17,8 @@ void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
     ctx->app = NULL;
     ctx->endpoint = NULL;
     ctx->middleware_index = 0;
+    ctx->group = NULL;
+    ctx->group_middleware_index = 0;
     ctx->request_id[0] = 0;
 }
 
@@ -220,6 +222,12 @@ void nnx_next(nnx_ctx *ctx)
         entry->fn(ctx, entry->data);
         return;
     }
+    if (ctx->group &&
+        ctx->group_middleware_index < ctx->group->middleware_count) {
+        entry = &ctx->group->middleware[ctx->group_middleware_index++];
+        entry->fn(ctx, entry->data);
+        return;
+    }
     if (ctx->endpoint) {
         nnx_handler endpoint = ctx->endpoint;
         ctx->endpoint = NULL;
@@ -233,5 +241,6 @@ void nnx_dispatch(nnx_app *app, nnx_ctx *ctx, nnx_handler endpoint)
     ctx->app = app;
     ctx->endpoint = endpoint;
     ctx->middleware_index = 0;
+    ctx->group_middleware_index = 0;
     nnx_next(ctx);
 }

@@ -13,12 +13,28 @@ typedef enum nnx_method {
     NNX_DELETE, NNX_HEAD, NNX_OPTIONS, NNX_METHOD_ANY
 } nnx_method;
 
-typedef struct nnx_route { nnx_method method; char *path; nnx_handler handler; } nnx_route;
 typedef struct nnx_middleware_entry {
     nnx_middleware_fn fn;
     void *data;
     void (*destroy)(void *data);
 } nnx_middleware_entry;
+
+struct nnx_group {
+    nnx_app *app;
+    char *prefix;
+    nnx_middleware_entry *middleware;
+    size_t middleware_count;
+    size_t middleware_capacity;
+    struct nnx_group *next;
+};
+
+typedef struct nnx_route {
+    nnx_method method;
+    char *path;
+    nnx_handler handler;
+    nnx_group *group;
+} nnx_route;
+
 typedef struct nnx_param_pair {
     char name[NNX_PARAM_NAME_MAX];
     char value[NNX_PARAM_VALUE_MAX];
@@ -41,6 +57,7 @@ struct nnx_app {
     nnx_middleware_entry *middleware;
     size_t middleware_count;
     size_t middleware_capacity;
+    nnx_group *groups;
 };
 
 struct nnx_ctx {
@@ -58,10 +75,13 @@ struct nnx_ctx {
     const nnx_app *app;
     nnx_handler endpoint;
     size_t middleware_index;
+    const nnx_group *group;
+    size_t group_middleware_index;
     char request_id[64];
 };
 
 int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
+int nnx_add_group_route(nnx_group *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *, nnx_ctx *);
 void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *,
                   const char *method_name, const char *path);
