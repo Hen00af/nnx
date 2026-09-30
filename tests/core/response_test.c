@@ -34,6 +34,7 @@ static const char *fake_header(void *request, const char *name)
     if (strcmp(name, "Cookie") == 0) return "session=abc123; theme=dark";
     if (strcmp(name, "Content-Type") == 0)
         return "application/x-www-form-urlencoded; charset=utf-8";
+    if (strcmp(name, "Host") == 0) return "example.test";
     return NULL;
 }
 
@@ -57,13 +58,25 @@ static void *fake_alloc(void *request, size_t size)
     return malloc(size);
 }
 
+static const char *fake_client_ip(void *request)
+{
+    (void)request;
+    return "127.0.0.1";
+}
+
+static const char *fake_scheme(void *request)
+{
+    (void)request;
+    return "https";
+}
+
 int main(void)
 {
     nnx_ctx ctx;
     size_t body_len;
     const nnx_adapter fake = {
         fake_send, fake_query, fake_header, fake_set_header, fake_log,
-        fake_alloc
+        fake_alloc, fake_client_ip, fake_scheme
     };
 
     nnx_ctx_init(&ctx, NULL, &fake, "POST", "/hello");
@@ -71,6 +84,17 @@ int main(void)
     assert(strcmp(nnx_path(&ctx), "/hello") == 0);
     assert(strcmp(nnx_query(&ctx, "q"), "nnx") == 0);
     assert(strcmp(nnx_header(&ctx, "X-Test"), "yes") == 0);
+    assert(strcmp(nnx_host(&ctx), "example.test") == 0);
+    assert(strcmp(nnx_client_ip(&ctx), "127.0.0.1") == 0);
+    assert(strcmp(nnx_scheme(&ctx), "https") == 0);
+
+    {
+        int user_id = 42;
+        assert(nnx_ctx_set(&ctx, "user_id", &user_id) == 0);
+        assert(nnx_ctx_get(&ctx, "user_id") == &user_id);
+        assert(nnx_ctx_set(&ctx, "user_id", NULL) == 0);
+        assert(nnx_ctx_get(&ctx, "user_id") == NULL);
+    }
 
     nnx_ctx_set_body(&ctx, "name=Seiya+Hattori&lang=C%2B%2B", 31);
     assert(nnx_body(&ctx, &body_len) != NULL);
