@@ -49,15 +49,21 @@ static int fake_log(void *request, const char *message)
 int main(void)
 {
     nnx_ctx ctx;
+    size_t body_len;
     const nnx_adapter fake = {
         fake_send, fake_query, fake_header, fake_set_header, fake_log
     };
 
-    nnx_ctx_init(&ctx, NULL, &fake, "GET", "/hello");
-    assert(strcmp(nnx_method_name(&ctx), "GET") == 0);
+    nnx_ctx_init(&ctx, NULL, &fake, "POST", "/hello");
+    assert(strcmp(nnx_method_name(&ctx), "POST") == 0);
     assert(strcmp(nnx_path(&ctx), "/hello") == 0);
     assert(strcmp(nnx_query(&ctx, "q"), "nnx") == 0);
     assert(strcmp(nnx_header(&ctx, "X-Test"), "yes") == 0);
+
+    nnx_ctx_set_body(&ctx, "payload", 7);
+    assert(nnx_body(&ctx, &body_len) != NULL);
+    assert(body_len == 7);
+    assert(strcmp(nnx_body_text(&ctx), "payload") == 0);
 
     assert(nnx_json(&ctx, 201, "{\"ok\":true}") == 0);
     assert(status_seen == 201);

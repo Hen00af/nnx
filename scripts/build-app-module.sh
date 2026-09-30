@@ -23,19 +23,20 @@ cp "$ROOT/src/core/response.c" "$GEN/response.c"
 cp "$ROOT/src/router/router.c" "$GEN/router.c"
 cp "$ROOT/src/middleware/builtin.c" "$GEN/builtin_middleware.c"
 cp "$ROOT/src/adapter/nginx/module.c" "$GEN/nginx_module.c"
+cp "$ROOT/src/adapter/nginx/request.c" "$GEN/nginx_request.c"
 cp "$ROOT/src/adapter/nginx/response.c" "$GEN/nginx_response.c"
 cp "$APP" "$GEN/user_app.c"
 
 # Flattened generated sources include the copied internal header directly.
 sed -i.bak 's#"../internal/nnx_internal.h"#"nnx_internal.h"#'     "$GEN/app.c" "$GEN/context.c" "$GEN/response.c" "$GEN/router.c" "$GEN/builtin_middleware.c"
-sed -i.bak 's#"../../internal/nnx_internal.h"#"nnx_internal.h"#' "$GEN/nginx_module.c"
+sed -i.bak 's#"../../internal/nnx_internal.h"#"nnx_internal.h"#'     "$GEN/nginx_module.c" "$GEN/nginx_request.c"
 rm -f "$GEN"/*.bak
 
 cat > "$GEN/config" <<EOF
 ngx_module_type=HTTP
 ngx_module_name=ngx_http_nnx_module
 ngx_module_incs="$GEN"
-ngx_module_srcs="$GEN/nginx_module.c $GEN/nginx_response.c $GEN/app.c $GEN/context.c $GEN/router.c $GEN/response.c $GEN/builtin_middleware.c $GEN/user_app.c"
+ngx_module_srcs="$GEN/nginx_module.c $GEN/nginx_request.c $GEN/nginx_response.c $GEN/app.c $GEN/context.c $GEN/router.c $GEN/response.c $GEN/builtin_middleware.c $GEN/user_app.c"
 . auto/module
 ngx_addon_name=\$ngx_module_name
 EOF

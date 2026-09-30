@@ -49,6 +49,8 @@ struct nnx_ctx {
     int response_status;
     const char *method_name;
     const char *path;
+    const unsigned char *body;
+    size_t body_len;
     nnx_param_pair params[NNX_MAX_PARAMS];
     size_t param_count;
     char wildcard[NNX_PARAM_VALUE_MAX];
@@ -62,6 +64,7 @@ int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *, nnx_ctx *);
 void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *,
                   const char *method_name, const char *path);
+void nnx_ctx_set_body(nnx_ctx *, const void *body, size_t len);
 void nnx_dispatch(nnx_app *, nnx_ctx *, nnx_handler);
 
 #endif

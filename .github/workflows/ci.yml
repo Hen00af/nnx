@@ -35,6 +35,9 @@ jobs:
           done
           grep -qx 'Hello, nnx!' /tmp/nnx-body
 
+          curl -fsS -X POST             -H 'Content-Type: text/plain'             --data 'body-through-nginx'             http://127.0.0.1:8080/echo > /tmp/nnx-echo
+          grep -qx 'body-through-nginx' /tmp/nnx-echo
+
       - name: Show Nginx log on failure
         if: failure()
         run: cat /tmp/nnx-nginx.log || true
