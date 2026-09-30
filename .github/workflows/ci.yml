@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit tests
+        run: make test
+
+      - name: Install Nginx build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpcre2-dev zlib1g-dev curl
+
+      - name: Download Nginx
+        run: |
+          curl -fsSLO https://nginx.org/download/nginx-1.30.5.tar.gz
+          tar xzf nginx-1.30.5.tar.gz
+
+      - name: Run full nnx integration suite
+        run: ./scripts/integration-test.sh ./nginx-1.30.5
+
+      - name: Show Nginx log on failure
+        if: failure()
+        run: cat /tmp/nnx-nginx.log || true
+
+      - name: Stop Nginx
+        if: always()
+        run: |
+          if [ -f /tmp/nnx-nginx.pid ]; then
+            kill "$(cat /tmp/nnx-nginx.pid)" 2>/dev/null || true
+          fi
