@@ -23,30 +23,8 @@ jobs:
           curl -fsSLO https://nginx.org/download/nginx-1.30.5.tar.gz
           tar xzf nginx-1.30.5.tar.gz
 
-      - name: Build and run nnx example
-        run: |
-          ./scripts/run-example.sh ./nginx-1.30.5 > /tmp/nnx-nginx.log 2>&1 &
-          echo $! > /tmp/nnx-nginx.pid
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8080/ > /tmp/nnx-body; then
-              break
-            fi
-            sleep 1
-          done
-          grep -qx 'Hello, nnx!' /tmp/nnx-body
-
-          curl -fsS -X POST             -H 'Content-Type: text/plain'             --data 'body-through-nginx'             http://127.0.0.1:8080/echo > /tmp/nnx-echo
-          grep -qx 'body-through-nginx' /tmp/nnx-echo
-
-          curl -sS -D /tmp/nnx-404-headers             -o /tmp/nnx-404-body             http://127.0.0.1:8080/missing
-          grep -q 'HTTP/1.1 404' /tmp/nnx-404-headers
-          grep -qi '^X-Request-ID:' /tmp/nnx-404-headers
-          grep -qx 'Not Found' /tmp/nnx-404-body
-
-          curl -sS -D /tmp/nnx-405-headers             -o /tmp/nnx-405-body             http://127.0.0.1:8080/echo
-          grep -q 'HTTP/1.1 405' /tmp/nnx-405-headers
-          grep -qi '^X-Request-ID:' /tmp/nnx-405-headers
-          grep -qx 'Method Not Allowed' /tmp/nnx-405-body
+      - name: Run full nnx integration suite
+        run: ./scripts/integration-test.sh ./nginx-1.30.5
 
       - name: Show Nginx log on failure
         if: failure()
