@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <nnx.h>
-#include "../src/nnx_internal.h"
+#include "../../src/internal/nnx_internal.h"
 
 static void handler(nnx_ctx *ctx) { (void)ctx; }
 
