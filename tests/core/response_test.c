@@ -8,7 +8,7 @@ static const char *type_seen;
 static unsigned char body_seen[64];
 static size_t len_seen;
 static char header_name_seen[32];
-static char header_value_seen[64];
+static char header_value_seen[256];
 
 static int fake_send(void *request, int status, const char *type,
                      const void *body, size_t len)
@@ -41,8 +41,11 @@ static const char *fake_header(void *request, const char *name)
 static int fake_set_header(void *request, const char *name, const char *value)
 {
     (void)request;
-    strcpy(header_name_seen, name);
-    strcpy(header_value_seen, value);
+    if (strlen(name) >= sizeof(header_name_seen) ||
+        strlen(value) >= sizeof(header_value_seen))
+        return -1;
+    memcpy(header_name_seen, name, strlen(name) + 1);
+    memcpy(header_value_seen, value, strlen(value) + 1);
     return 0;
 }
 
