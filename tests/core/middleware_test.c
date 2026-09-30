@@ -18,8 +18,8 @@ int main(void)
 {
     nnx_app *app = nnx_new(); nnx_ctx ctx = {0};
     assert(app);
-    assert(nnx_use(app, first, NULL) == 0);
-    assert(nnx_use(app, second, NULL) == 0);
+    assert(nnx_use(app, (nnx_middleware){first, NULL, NULL}) == 0);
+    assert(nnx_use(app, (nnx_middleware){second, NULL, NULL}) == 0);
     nnx_dispatch(app, &ctx, endpoint);
     assert(n == 5);
     assert(trace[0] == 1 && trace[1] == 2 && trace[2] == 3);

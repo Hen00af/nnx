@@ -14,6 +14,7 @@ void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
     ctx->app = NULL;
     ctx->endpoint = NULL;
     ctx->middleware_index = 0;
+    ctx->request_id[0] = 0;
 }
 
 const char *nnx_method_name(nnx_ctx *ctx)
@@ -32,6 +33,18 @@ const char *nnx_header(nnx_ctx *ctx, const char *name)
 {
     if (!ctx || !name || !ctx->adapter || !ctx->adapter->header) return NULL;
     return ctx->adapter->header(ctx->adapter_request, name);
+}
+
+const char *nnx_request_id(nnx_ctx *ctx)
+{ return ctx && ctx->request_id[0] ? ctx->request_id : NULL; }
+
+int nnx_status(nnx_ctx *ctx)
+{ return ctx ? ctx->response_status : 0; }
+
+int nnx_log(nnx_ctx *ctx, const char *message)
+{
+    if (!ctx || !message || !ctx->adapter || !ctx->adapter->log) return -1;
+    return ctx->adapter->log(ctx->adapter_request, message);
 }
 
 void nnx_next(nnx_ctx *ctx)
