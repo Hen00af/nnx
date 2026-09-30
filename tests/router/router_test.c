@@ -36,6 +36,9 @@ int main(void)
     assert(nnx_match_route(app, NNX_DELETE, "/health", &ctx) == any_h);
     assert(nnx_match_route(app, NNX_PUT, "/users/7", &ctx) == param_h);
     assert(nnx_match_route(app, NNX_POST, "/missing", &ctx) == 0);
+    assert(nnx_route_path_exists(app, "/users/123") == 1);
+    assert(nnx_route_path_exists(app, "/assets/js/app.js") == 1);
+    assert(nnx_route_path_exists(app, "/definitely-missing") == 0);
 
     assert(nnx_match_route(app, NNX_GET, "/api/users/99", &ctx) == group_h);
     assert(ctx.group == api);

@@ -1,4 +1,5 @@
 #include <nnx.h>
+#include <nnx/middleware.h>
 
 static void hello(nnx_ctx *ctx)
 {
@@ -12,6 +13,7 @@ static void echo_body(nnx_ctx *ctx)
 
 int nnx_register(nnx_app *app)
 {
+    if (nnx_use(app, nnx_request_id_middleware()) != 0) return -1;
     if (nnx_get(app, "/", hello) != 0) return -1;
     if (nnx_post(app, "/echo", echo_body) != 0) return -1;
     return 0;

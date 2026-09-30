@@ -23,6 +23,11 @@ static void nnx_free_middleware(nnx_middleware_entry *entries, size_t count)
 
 nnx_app *nnx_new(void) { return calloc(1, sizeof(nnx_app)); }
 
+void nnx_set_error_handler(nnx_app *app, nnx_error_handler handler)
+{
+    if (app) app->error_handler = handler;
+}
+
 void nnx_free(nnx_app *app)
 {
     size_t i;

@@ -20,6 +20,7 @@ void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
     ctx->group = NULL;
     ctx->group_middleware_index = 0;
     ctx->request_id[0] = 0;
+    ctx->pending_error_status = 0;
 }
 
 void nnx_ctx_set_body(nnx_ctx *ctx, const void *body, size_t len)
@@ -213,6 +214,30 @@ int nnx_log(nnx_ctx *ctx, const char *message)
     return ctx->adapter->log(ctx->adapter_request, message);
 }
 
+static void nnx_default_error_handler(nnx_ctx *ctx, int status)
+{
+    const char *message = "Internal Server Error\n";
+    if (status == 404) message = "Not Found\n";
+    else if (status == 405) message = "Method Not Allowed\n";
+    else if (status == 413) message = "Payload Too Large\n";
+    nnx_text(ctx, status, message);
+}
+
+static void nnx_invoke_error(nnx_ctx *ctx, int status)
+{
+    nnx_error_handler handler;
+    if (!ctx || ctx->response_sent) return;
+    handler = ctx->app ? ctx->app->error_handler : NULL;
+    if (handler) handler(ctx, status);
+    else nnx_default_error_handler(ctx, status);
+}
+
+static void nnx_error_endpoint(nnx_ctx *ctx)
+{
+    nnx_invoke_error(ctx, ctx->pending_error_status ?
+                     ctx->pending_error_status : 500);
+}
+
 void nnx_next(nnx_ctx *ctx)
 {
     nnx_middleware_entry *entry;
@@ -232,6 +257,8 @@ void nnx_next(nnx_ctx *ctx)
         nnx_handler endpoint = ctx->endpoint;
         ctx->endpoint = NULL;
         endpoint(ctx);
+        if (!ctx->response_sent && ctx->pending_error_status == 0)
+            nnx_invoke_error(ctx, 500);
     }
 }
 
@@ -240,6 +267,19 @@ void nnx_dispatch(nnx_app *app, nnx_ctx *ctx, nnx_handler endpoint)
     if (!app || !ctx || !endpoint) return;
     ctx->app = app;
     ctx->endpoint = endpoint;
+    ctx->middleware_index = 0;
+    ctx->group_middleware_index = 0;
+    ctx->pending_error_status = 0;
+    nnx_next(ctx);
+}
+
+void nnx_dispatch_error(nnx_app *app, nnx_ctx *ctx, int status)
+{
+    if (!app || !ctx) return;
+    ctx->group = NULL;
+    ctx->pending_error_status = status;
+    ctx->app = app;
+    ctx->endpoint = nnx_error_endpoint;
     ctx->middleware_index = 0;
     ctx->group_middleware_index = 0;
     nnx_next(ctx);
