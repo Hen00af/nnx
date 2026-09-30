@@ -31,6 +31,7 @@ typedef struct nnx_adapter {
     const char *(*header)(void *request, const char *name);
     int (*set_header)(void *request, const char *name, const char *value);
     int (*log)(void *request, const char *message);
+    void *(*alloc)(void *request, size_t size);
 } nnx_adapter;
 
 struct nnx_app {

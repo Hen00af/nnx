@@ -110,3 +110,10 @@ int nnx_nginx_log(void *request, const char *message)
     ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "%s", message);
     return 0;
 }
+
+void *nnx_nginx_alloc(void *request, size_t size)
+{
+    ngx_http_request_t *r = request;
+    if (!r || !size) return NULL;
+    return ngx_pnalloc(r->pool, size);
+}

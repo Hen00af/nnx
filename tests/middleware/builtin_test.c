@@ -55,7 +55,7 @@ static int fake_log(void *request, const char *message)
 }
 
 static const nnx_adapter fake = {
-    fake_send, fake_query, fake_header, fake_set_header, fake_log
+    fake_send, fake_query, fake_header, fake_set_header, fake_log, NULL
 };
 
 static void ok_endpoint(nnx_ctx *ctx)

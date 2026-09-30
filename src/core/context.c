@@ -1,3 +1,4 @@
+#include <string.h>
 #include "../internal/nnx_internal.h"
 
 void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
@@ -42,6 +43,148 @@ const char *nnx_header(nnx_ctx *ctx, const char *name)
 {
     if (!ctx || !name || !ctx->adapter || !ctx->adapter->header) return NULL;
     return ctx->adapter->header(ctx->adapter_request, name);
+}
+
+void *nnx_alloc(nnx_ctx *ctx, size_t size)
+{
+    if (!ctx || !size || !ctx->adapter || !ctx->adapter->alloc) return NULL;
+    return ctx->adapter->alloc(ctx->adapter_request, size);
+}
+
+static int nnx_ascii_ieq_prefix(const char *s, const char *prefix)
+{
+    unsigned char a, b;
+    if (!s || !prefix) return 0;
+    while (*prefix) {
+        if (!*s) return 0;
+        a = (unsigned char)*s++;
+        b = (unsigned char)*prefix++;
+        if (a >= 'A' && a <= 'Z') a = (unsigned char)(a + ('a' - 'A'));
+        if (b >= 'A' && b <= 'Z') b = (unsigned char)(b + ('a' - 'A'));
+        if (a != b) return 0;
+    }
+    return 1;
+}
+
+static int nnx_hex_value(unsigned char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static char *nnx_url_decode(nnx_ctx *ctx, const char *src, size_t len)
+{
+    char *out;
+    size_t i, n = 0;
+    int hi, lo;
+
+    out = nnx_alloc(ctx, len + 1);
+    if (!out) return NULL;
+
+    for (i = 0; i < len; ++i) {
+        if (src[i] == '+') {
+            out[n++] = ' ';
+        } else if (src[i] == '%' && i + 2 < len &&
+                   (hi = nnx_hex_value((unsigned char)src[i + 1])) >= 0 &&
+                   (lo = nnx_hex_value((unsigned char)src[i + 2])) >= 0) {
+            out[n++] = (char)((hi << 4) | lo);
+            i += 2;
+        } else {
+            out[n++] = src[i];
+        }
+    }
+    out[n] = 0;
+    return out;
+}
+
+const char *nnx_cookie(nnx_ctx *ctx, const char *name)
+{
+    const char *cookie;
+    const char *p;
+    const char *key;
+    const char *key_end;
+    const char *value;
+    const char *value_end;
+    size_t name_len;
+    char *out;
+
+    if (!ctx || !name) return NULL;
+    cookie = nnx_header(ctx, "Cookie");
+    if (!cookie) return NULL;
+    name_len = strlen(name);
+    p = cookie;
+
+    while (*p) {
+        while (*p == ' ' || *p == '\t' || *p == ';') ++p;
+        key = p;
+        while (*p && *p != '=' && *p != ';') ++p;
+        key_end = p;
+        while (key_end > key && (key_end[-1] == ' ' || key_end[-1] == '\t'))
+            --key_end;
+        if (*p != '=') {
+            while (*p && *p != ';') ++p;
+            continue;
+        }
+        ++p;
+        while (*p == ' ' || *p == '\t') ++p;
+        value = p;
+        while (*p && *p != ';') ++p;
+        value_end = p;
+        while (value_end > value &&
+               (value_end[-1] == ' ' || value_end[-1] == '\t'))
+            --value_end;
+
+        if ((size_t)(key_end - key) == name_len &&
+            memcmp(key, name, name_len) == 0) {
+            size_t len = (size_t)(value_end - value);
+            out = nnx_alloc(ctx, len + 1);
+            if (!out) return NULL;
+            if (len) memcpy(out, value, len);
+            out[len] = 0;
+            return out;
+        }
+    }
+    return NULL;
+}
+
+const char *nnx_form(nnx_ctx *ctx, const char *name)
+{
+    const char *content_type;
+    const char *body;
+    const char *end;
+    const char *pair_end;
+    const char *eq;
+    char *decoded_key;
+    char *decoded_value;
+
+    if (!ctx || !name || !ctx->body) return NULL;
+    content_type = nnx_header(ctx, "Content-Type");
+    if (!content_type ||
+        !nnx_ascii_ieq_prefix(content_type, "application/x-www-form-urlencoded"))
+        return NULL;
+
+    body = (const char *)ctx->body;
+    end = body + ctx->body_len;
+    while (body < end) {
+        pair_end = body;
+        while (pair_end < end && *pair_end != '&') ++pair_end;
+        eq = body;
+        while (eq < pair_end && *eq != '=') ++eq;
+
+        decoded_key = nnx_url_decode(ctx, body, (size_t)(eq - body));
+        if (!decoded_key) return NULL;
+        if (strcmp(decoded_key, name) == 0) {
+            if (eq == pair_end)
+                return nnx_url_decode(ctx, "", 0);
+            decoded_value = nnx_url_decode(ctx, eq + 1,
+                                           (size_t)(pair_end - (eq + 1)));
+            return decoded_value;
+        }
+        body = pair_end < end ? pair_end + 1 : end;
+    }
+    return NULL;
 }
 
 const char *nnx_request_id(nnx_ctx *ctx)
