@@ -48,6 +48,7 @@ int nnx_options(nnx_app *, const char *, nnx_handler);
 int nnx_any(nnx_app *, const char *, nnx_handler);
 
 nnx_group *nnx_group_new(nnx_app *, const char *prefix);
+nnx_group *nnx_group_group(nnx_group *parent, const char *prefix);
 int nnx_group_use(nnx_group *, nnx_middleware);
 int nnx_group_get(nnx_group *, const char *, nnx_handler);
 int nnx_group_post(nnx_group *, const char *, nnx_handler);
