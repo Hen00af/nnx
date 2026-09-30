@@ -23,9 +23,21 @@ int nnx_any(nnx_app *, const char *, nnx_handler);
 int nnx_use(nnx_app *, nnx_middleware_fn, void *data);
 void nnx_next(nnx_ctx *);
 
+const char *nnx_method_name(nnx_ctx *);
+const char *nnx_path(nnx_ctx *);
 const char *nnx_param(nnx_ctx *, const char *name);
 const char *nnx_wildcard(nnx_ctx *);
+const char *nnx_query(nnx_ctx *, const char *name);
+const char *nnx_header(nnx_ctx *, const char *name);
+
+int nnx_set_header(nnx_ctx *, const char *name, const char *value);
 int nnx_send(nnx_ctx *, int status, const char *body);
+int nnx_text(nnx_ctx *, int status, const char *body);
+int nnx_json(nnx_ctx *, int status, const char *json);
+int nnx_html(nnx_ctx *, int status, const char *html);
+int nnx_blob(nnx_ctx *, int status, const char *content_type,
+             const void *data, size_t len);
+int nnx_redirect(nnx_ctx *, int status, const char *location);
 
 int nnx_register(nnx_app *app);
 
