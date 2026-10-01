@@ -49,6 +49,11 @@ typedef struct nnx_value_pair {
     void *value;
 } nnx_value_pair;
 
+typedef struct nnx_next_frame {
+    int called;
+    struct nnx_next_frame *prev;
+} nnx_next_frame;
+
 typedef struct nnx_adapter {
     int (*send)(void *request, int status, const char *content_type,
                 const void *body, size_t len);
@@ -96,12 +101,14 @@ struct nnx_ctx {
     int pending_error_status;
     nnx_value_pair values[NNX_MAX_VALUES];
     size_t value_count;
+    nnx_next_frame *next_frame;
 };
 
 int nnx_add_route(nnx_app *, nnx_method, const char *, nnx_handler);
 int nnx_add_group_route(nnx_group *, nnx_method, const char *, nnx_handler);
 nnx_handler nnx_match_route(const nnx_app *, nnx_method, const char *, nnx_ctx *);
 int nnx_route_path_exists(const nnx_app *, const char *);
+int nnx_route_allow(const nnx_app *, const char *, char *buffer, size_t capacity);
 void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *,
                   const char *method_name, const char *path);
 void nnx_ctx_set_body(nnx_ctx *, const void *body, size_t len);
