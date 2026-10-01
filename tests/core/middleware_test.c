@@ -64,8 +64,52 @@ static void test_nested_group_chain(void)
     nnx_free(app);
 }
 
+
+static void stop_middleware(nnx_ctx *ctx, void *data)
+{
+    (void)ctx;
+    (void)data;
+    trace[n++] = 2;
+}
+
+static void double_next_middleware(nnx_ctx *ctx, void *data)
+{
+    (void)data;
+    trace[n++] = 1;
+    nnx_next(ctx);
+    nnx_next(ctx);
+    trace[n++] = 3;
+}
+
+static void should_not_run(nnx_ctx *ctx)
+{
+    (void)ctx;
+    trace[n++] = 9;
+}
+
+static void test_double_next_is_guarded(void)
+{
+    nnx_app *app = nnx_new();
+    nnx_ctx ctx = {0};
+
+    n = 0;
+    assert(app);
+    assert(nnx_use(app, (nnx_middleware){double_next_middleware, NULL, NULL}) == 0);
+    assert(nnx_use(app, (nnx_middleware){stop_middleware, NULL, NULL}) == 0);
+
+    nnx_dispatch(app, &ctx, should_not_run);
+
+    assert(n == 3);
+    assert(trace[0] == 1);
+    assert(trace[1] == 2);
+    assert(trace[2] == 3);
+
+    nnx_free(app);
+}
+
 int main(void)
 {
     test_nested_group_chain();
+    test_double_next_is_guarded();
     return 0;
 }
