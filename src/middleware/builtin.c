@@ -343,3 +343,45 @@ nnx_middleware nnx_secure(nnx_secure_config config)
     out.destroy = secure_destroy;
     return out;
 }
+
+
+typedef struct nnx_body_limit_state {
+    size_t max_bytes;
+} nnx_body_limit_state;
+
+static void body_limit_destroy(void *data)
+{
+    free(data);
+}
+
+static void body_limit_middleware(nnx_ctx *ctx, void *data)
+{
+    nnx_body_limit_state *state = data;
+
+    if (!state) {
+        nnx_next(ctx);
+        return;
+    }
+    if (ctx->body_len > state->max_bytes) {
+        nnx_invoke_error(ctx, 413);
+        return;
+    }
+    nnx_next(ctx);
+}
+
+nnx_middleware nnx_body_limit(size_t max_bytes)
+{
+    nnx_middleware bad = { NULL, NULL, NULL };
+    nnx_middleware out;
+    nnx_body_limit_state *state;
+
+    if (max_bytes == 0) return bad;
+    state = malloc(sizeof(*state));
+    if (!state) return bad;
+    state->max_bytes = max_bytes;
+
+    out.fn = body_limit_middleware;
+    out.data = state;
+    out.destroy = body_limit_destroy;
+    return out;
+}
