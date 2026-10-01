@@ -13,6 +13,10 @@ jobs:
       - name: Unit tests
         run: make test
 
+      - name: ASan and UBSan
+        run: |
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 make test-sanitize
+
       - name: Install Nginx build dependencies
         run: |
           sudo apt-get update
