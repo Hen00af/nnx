@@ -10,6 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Shell syntax
+        run: |
+          for script in scripts/*.sh; do
+            sh -n "$script"
+          done
+
       - name: Framework boundary checks
         run: |
           if grep -R -n 'ngx_' include; then
