@@ -180,8 +180,12 @@ static int nnx_allow_append(char *buffer, size_t capacity, size_t *used,
 int nnx_route_allow(const nnx_app *app, const char *path,
                     char *buffer, size_t capacity)
 {
+    static const nnx_method methods[] = {
+        NNX_GET, NNX_HEAD, NNX_POST, NNX_PUT,
+        NNX_PATCH, NNX_DELETE, NNX_OPTIONS
+    };
     static const char *names[] = {
-        "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
+        "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
     };
     unsigned int mask = 0;
     size_t i;
@@ -203,8 +207,8 @@ int nnx_route_allow(const nnx_app *app, const char *path,
     }
 
     if (!mask) return -1;
-    for (i = 0; i < NNX_METHOD_ANY; ++i)
-        if ((mask & (1u << i)) &&
+    for (i = 0; i < sizeof(methods) / sizeof(methods[0]); ++i)
+        if ((mask & (1u << methods[i])) &&
             nnx_allow_append(buffer, capacity, &used, names[i]) != 0)
             return -1;
     return 0;
