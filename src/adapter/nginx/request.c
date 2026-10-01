@@ -35,6 +35,15 @@ static char *nnx_pool_cstr(ngx_pool_t *pool, const u_char *data, size_t len)
     return out;
 }
 
+static void nnx_set_allow_header(nnx_nginx_request_state *state,
+                                 const char *path)
+{
+    char allow[128];
+
+    if (nnx_route_allow(state->app, path, allow, sizeof(allow)) == 0)
+        nnx_set_header(&state->ctx, "Allow", allow);
+}
+
 static ngx_int_t nnx_dispatch_request(ngx_http_request_t *r,
                                       nnx_nginx_request_state *state)
 {
@@ -154,12 +163,16 @@ ngx_int_t nnx_nginx_handle_request(ngx_http_request_t *r, nnx_app *app,
 
     if (nnx_method_from_nginx(r, &method) != 0) {
         state->error_status = nnx_route_path_exists(app, path) ? 405 : 404;
+        if (state->error_status == 405)
+            nnx_set_allow_header(state, path);
         return nnx_dispatch_request(r, state);
     }
 
     state->handler = nnx_match_route(app, method, path, &state->ctx);
     if (!state->handler) {
         state->error_status = nnx_route_path_exists(app, path) ? 405 : 404;
+        if (state->error_status == 405)
+            nnx_set_allow_header(state, path);
         return nnx_dispatch_request(r, state);
     }
 
