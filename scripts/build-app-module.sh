@@ -6,6 +6,15 @@ if [ "$#" -ne 2 ]; then
     exit 2
 fi
 
+if [ ! -d "$1" ] || [ ! -f "$1/configure" ]; then
+    echo "nnx: invalid Nginx source directory: $1" >&2
+    exit 2
+fi
+if [ ! -f "$2" ]; then
+    echo "nnx: application source not found: $2" >&2
+    exit 2
+fi
+
 NGINX_SRC=$(cd "$1" && pwd)
 APP=$(cd "$(dirname "$2")" && pwd)/$(basename "$2")
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
