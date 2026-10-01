@@ -15,6 +15,19 @@ if [ ! -f "$2" ]; then
     exit 2
 fi
 
+for tool in make sed; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        echo "nnx: required build tool not found: $tool" >&2
+        exit 2
+    fi
+done
+CC_BIN=${CC:-cc}
+CC_BIN=${CC_BIN%% *}
+if ! command -v "$CC_BIN" >/dev/null 2>&1; then
+    echo "nnx: C compiler not found: $CC_BIN" >&2
+    exit 2
+fi
+
 NGINX_SRC=$(cd "$1" && pwd)
 APP=$(cd "$(dirname "$2")" && pwd)/$(basename "$2")
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
