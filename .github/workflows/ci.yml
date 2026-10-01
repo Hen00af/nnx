@@ -10,6 +10,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Framework boundary checks
+        run: |
+          if grep -R -n 'ngx_' include; then
+            echo "public headers must not expose Nginx symbols" >&2
+            exit 1
+          fi
+          if grep -R -n '#include .*ngx_' src/core src/router src/middleware src/internal; then
+            echo "Nginx headers must stay inside the adapter" >&2
+            exit 1
+          fi
+
       - name: Unit tests
         run: make test
 
@@ -29,6 +40,9 @@ jobs:
 
       - name: Run full nnx integration suite
         run: ./scripts/integration-test.sh ./nginx-1.30.5
+
+      - name: Verify worker crash isolation
+        run: ./scripts/worker-crash-test.sh ./nginx-1.30.5
 
       - name: Show Nginx log on failure
         if: failure()
