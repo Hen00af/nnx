@@ -181,11 +181,42 @@ static void test_basic_auth(void)
     nnx_free(app);
 }
 
+
+static void test_body_limit(void)
+{
+    nnx_app *app = nnx_new();
+    nnx_ctx ctx;
+    nnx_middleware invalid;
+
+    reset_state();
+    assert(app);
+
+    invalid = nnx_body_limit(0);
+    assert(invalid.fn == NULL);
+    assert(nnx_use(app, nnx_body_limit(16)) == 0);
+
+    nnx_ctx_init(&ctx, NULL, &fake, "POST", "/upload");
+    nnx_ctx_set_body(&ctx, "0123456789abcdef", 16);
+    nnx_dispatch(app, &ctx, ok_endpoint);
+    assert(endpoint_calls == 1);
+    assert(status_seen == 200);
+
+    reset_state();
+    nnx_ctx_init(&ctx, NULL, &fake, "POST", "/upload");
+    nnx_ctx_set_body(&ctx, "0123456789abcdefX", 17);
+    nnx_dispatch(app, &ctx, ok_endpoint);
+    assert(endpoint_calls == 0);
+    assert(status_seen == 413);
+
+    nnx_free(app);
+}
+
 int main(void)
 {
     test_request_id_and_logger();
     test_cors_preflight();
     test_secure_headers();
     test_basic_auth();
+    test_body_limit();
     return 0;
 }
