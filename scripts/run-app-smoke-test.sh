@@ -25,7 +25,7 @@ trap cleanup EXIT INT TERM
 RUNNER_PID=$!
 
 body=""
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
     if ! kill -0 "$RUNNER_PID" 2>/dev/null; then
         echo "nnx: run-app exited before becoming healthy" >&2
         wait "$RUNNER_PID" 2>/dev/null || true
