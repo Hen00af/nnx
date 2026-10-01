@@ -9,6 +9,8 @@ static unsigned char body_seen[64];
 static size_t len_seen;
 static char header_name_seen[32];
 static char header_value_seen[256];
+static unsigned char request_alloc[4096];
+static size_t request_alloc_used;
 
 static int fake_send(void *request, int status, const char *type,
                      const void *body, size_t len)
@@ -57,8 +59,13 @@ static int fake_log(void *request, const char *message)
 
 static void *fake_alloc(void *request, size_t size)
 {
+    void *out;
     (void)request;
-    return malloc(size);
+    if (size > sizeof(request_alloc) - request_alloc_used)
+        return NULL;
+    out = request_alloc + request_alloc_used;
+    request_alloc_used += size;
+    return out;
 }
 
 static const char *fake_client_ip(void *request)
@@ -77,6 +84,7 @@ int main(void)
 {
     nnx_ctx ctx;
     size_t body_len;
+    request_alloc_used = 0;
     const nnx_adapter fake = {
         fake_send, fake_query, fake_header, fake_set_header, fake_log,
         fake_alloc, fake_client_ip, fake_scheme

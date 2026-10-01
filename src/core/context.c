@@ -274,7 +274,7 @@ static void nnx_default_error_handler(nnx_ctx *ctx, int status)
     nnx_text(ctx, status, message);
 }
 
-static void nnx_invoke_error(nnx_ctx *ctx, int status)
+void nnx_invoke_error(nnx_ctx *ctx, int status)
 {
     nnx_error_handler handler;
     if (!ctx || ctx->response_sent) return;

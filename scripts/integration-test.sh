@@ -119,9 +119,30 @@ curl -sS -X DELETE -D "$method_headers" -o "$method_body" http://127.0.0.1:8080/
 grep -q 'HTTP/1.1 405' "$method_headers"
 grep -q '"error":405' "$method_body"
 
+
+payload_headers="$PREFIX/413.headers"
+payload_body="$PREFIX/413.body"
+curl -sS -X POST -H "Content-Type: text/plain" \
+  --data-binary "0123456789012345678901234567890123456789" \
+  -D "$payload_headers" -o "$payload_body" \
+  http://127.0.0.1:8080/echo
+grep -q 'HTTP/1.1 413' "$payload_headers"
+grep -q '"error":413' "$payload_body"
+grep -qi '^X-Request-ID:' "$payload_headers"
+
+internal_headers="$PREFIX/500.headers"
+internal_body="$PREFIX/500.body"
+curl -sS -D "$internal_headers" -o "$internal_body" \
+  http://127.0.0.1:8080/implicit-500
+grep -q 'HTTP/1.1 500' "$internal_headers"
+grep -q '"error":500' "$internal_body"
+grep -qi '^X-Request-ID:' "$internal_headers"
+
 assert_status 200 http://127.0.0.1:8080/
 assert_status 200 http://127.0.0.1:8080/api/v1/users/123
 assert_status 404 http://127.0.0.1:8080/not-found
 assert_status 405 -X DELETE http://127.0.0.1:8080/users/42
+assert_status 413 -X POST --data-binary "0123456789012345678901234567890123456789" http://127.0.0.1:8080/echo
+assert_status 500 http://127.0.0.1:8080/implicit-500
 
 echo "nnx integration test: PASS"

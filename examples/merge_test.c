@@ -42,6 +42,11 @@ static void echo_body(nnx_ctx *ctx)
     nnx_blob(ctx, 200, "application/octet-stream", body, len);
 }
 
+static void implicit_500(nnx_ctx *ctx)
+{
+    (void)ctx;
+}
+
 static void form(nnx_ctx *ctx)
 {
     const char *name = nnx_form(ctx, "name");
@@ -136,11 +141,13 @@ int nnx_register(nnx_app *app)
         .hsts_include_subdomains = 0,
         .hsts_preload = 0
     })) != 0) return -1;
+    if (nnx_use(app, nnx_body_limit(32)) != 0) return -1;
 
     if (nnx_get(app, "/", root) != 0) return -1;
     if (nnx_get(app, "/users/:id", user) != 0) return -1;
     if (nnx_get(app, "/search", search) != 0) return -1;
     if (nnx_post(app, "/echo", echo_body) != 0) return -1;
+    if (nnx_get(app, "/implicit-500", implicit_500) != 0) return -1;
     if (nnx_post(app, "/form", form) != 0) return -1;
     if (nnx_get(app, "/cookie", set_cookie) != 0) return -1;
     if (nnx_get(app, "/cookie/read", read_cookie) != 0) return -1;
