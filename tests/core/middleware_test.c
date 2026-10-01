@@ -3,6 +3,22 @@
 
 static int trace[16];
 static int n;
+static int sent_status;
+
+static int fake_send(void *request, int status, const char *type,
+                     const void *body, size_t len)
+{
+    (void)request;
+    (void)type;
+    (void)body;
+    (void)len;
+    sent_status = status;
+    return 0;
+}
+
+static const nnx_adapter fake = {
+    fake_send, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+};
 
 typedef struct marks {
     int before;
@@ -107,9 +123,41 @@ static void test_double_next_is_guarded(void)
     nnx_free(app);
 }
 
+
+static void respond_then_next(nnx_ctx *ctx, void *data)
+{
+    (void)data;
+    trace[n++] = 1;
+    assert(nnx_text(ctx, 204, "") == 0);
+    nnx_next(ctx);
+    trace[n++] = 2;
+}
+
+static void test_response_short_circuits_next(void)
+{
+    nnx_app *app = nnx_new();
+    nnx_ctx ctx;
+
+    n = 0;
+    sent_status = 0;
+    assert(app);
+    assert(nnx_use(app, (nnx_middleware){respond_then_next, NULL, NULL}) == 0);
+
+    nnx_ctx_init(&ctx, NULL, &fake, "GET", "/short");
+    nnx_dispatch(app, &ctx, should_not_run);
+
+    assert(sent_status == 204);
+    assert(n == 2);
+    assert(trace[0] == 1);
+    assert(trace[1] == 2);
+
+    nnx_free(app);
+}
+
 int main(void)
 {
     test_nested_group_chain();
     test_double_next_is_guarded();
+    test_response_short_circuits_next();
     return 0;
 }
