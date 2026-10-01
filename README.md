@@ -90,6 +90,9 @@ The current runner is development tooling. A dedicated `nnx run app.c` CLI is pl
 
 - GET / POST / PUT / PATCH / DELETE / HEAD / OPTIONS / Any route registration
 - static routes, `:param` routes, and `*` wildcards
+- HEAD fallback to GET when no explicit HEAD handler exists
+- 405 responses with an `Allow` header
+- duplicate exact route registration rejection
 - nested route groups and group-scoped middleware
 - composable middleware with before/after unwind
 - Logger, RequestID, CORS, BasicAuth, Secure headers, and BodyLimit middleware
@@ -133,6 +136,20 @@ Nginx adapter
 Router, middleware, context, and response logic remain Nginx-independent. Nginx-specific headers and APIs stay under `src/adapter/nginx/`.
 
 See the ADRs in `docs/adr/` for the process/runtime decisions.
+
+## Routing semantics
+
+Route priority is:
+
+```text
+static > :param > *
+```
+
+An explicit HEAD route wins. If no HEAD route matches, nnx falls back to the matching GET route; Nginx's `header_only` behavior prevents the response body from being emitted.
+
+OPTIONS is explicit-route or middleware driven in v0.1. If a path exists but no OPTIONS handler or middleware answers it, nnx returns 405 with an `Allow` header.
+
+Registering the same method and exact route pattern twice is rejected. An `Any` route also conflicts with a method-specific route on the same exact pattern. Broader ambiguous-pattern detection is still future work.
 
 ## Request body model
 
