@@ -3,6 +3,11 @@
 
 #include <stddef.h>
 
+#define NNX_VERSION_MAJOR 0
+#define NNX_VERSION_MINOR 1
+#define NNX_VERSION_PATCH 0
+#define NNX_VERSION "0.1.0-dev"
+
 typedef struct nnx_app nnx_app;
 typedef struct nnx_ctx nnx_ctx;
 typedef struct nnx_group nnx_group;
