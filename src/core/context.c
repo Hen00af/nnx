@@ -305,7 +305,7 @@ void nnx_next(nnx_ctx *ctx)
 {
     nnx_middleware_entry *entry;
 
-    if (!ctx || !ctx->app) return;
+    if (!ctx || !ctx->app || ctx->response_sent) return;
     if (ctx->next_frame) {
         if (ctx->next_frame->called) return;
         ctx->next_frame->called = 1;
