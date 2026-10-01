@@ -26,6 +26,13 @@ RUNNER_PID=$!
 
 body=""
 for i in $(seq 1 30); do
+    if ! kill -0 "$RUNNER_PID" 2>/dev/null; then
+        echo "nnx: run-app exited before becoming healthy" >&2
+        wait "$RUNNER_PID" 2>/dev/null || true
+        RUNNER_PID=""
+        cat "$LOG" >&2 || true
+        exit 1
+    fi
     body=$(curl -sS --max-time 2 http://127.0.0.1:18082/ 2>/dev/null || true)
     if [ "$body" = "Hello, nnx!" ]; then
         break
