@@ -107,5 +107,6 @@ void nnx_ctx_init(nnx_ctx *, void *, const nnx_adapter *,
 void nnx_ctx_set_body(nnx_ctx *, const void *body, size_t len);
 void nnx_dispatch(nnx_app *, nnx_ctx *, nnx_handler);
 void nnx_dispatch_error(nnx_app *, nnx_ctx *, int status);
+void nnx_invoke_error(nnx_ctx *, int status);
 
 #endif
