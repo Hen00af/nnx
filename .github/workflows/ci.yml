@@ -44,6 +44,9 @@ jobs:
           curl -fsSLO https://nginx.org/download/nginx-1.30.5.tar.gz
           tar xzf nginx-1.30.5.tar.gz
 
+      - name: Smoke test public app runner
+        run: ./scripts/run-app-smoke-test.sh ./nginx-1.30.5
+
       - name: Run full nnx integration suite
         run: ./scripts/integration-test.sh ./nginx-1.30.5
 
