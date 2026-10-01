@@ -24,6 +24,7 @@ void nnx_ctx_init(nnx_ctx *ctx, void *request, const nnx_adapter *adapter,
     ctx->request_id[0] = 0;
     ctx->pending_error_status = 0;
     ctx->value_count = 0;
+    ctx->next_frame = NULL;
 }
 
 void nnx_ctx_set_body(nnx_ctx *ctx, const void *body, size_t len)
@@ -289,20 +290,37 @@ static void nnx_error_endpoint(nnx_ctx *ctx)
                      ctx->pending_error_status : 500);
 }
 
+static void nnx_call_middleware(nnx_ctx *ctx, nnx_middleware_entry *entry)
+{
+    nnx_next_frame frame;
+
+    frame.called = 0;
+    frame.prev = ctx->next_frame;
+    ctx->next_frame = &frame;
+    entry->fn(ctx, entry->data);
+    ctx->next_frame = frame.prev;
+}
+
 void nnx_next(nnx_ctx *ctx)
 {
     nnx_middleware_entry *entry;
+
     if (!ctx || !ctx->app) return;
+    if (ctx->next_frame) {
+        if (ctx->next_frame->called) return;
+        ctx->next_frame->called = 1;
+    }
+
     if (ctx->middleware_index < ctx->app->middleware_count) {
         entry = &ctx->app->middleware[ctx->middleware_index++];
-        entry->fn(ctx, entry->data);
+        nnx_call_middleware(ctx, entry);
         return;
     }
     while (ctx->group_index < ctx->group_depth) {
         const nnx_group *group = ctx->group_chain[ctx->group_index];
         if (ctx->group_middleware_index < group->middleware_count) {
             entry = &group->middleware[ctx->group_middleware_index++];
-            entry->fn(ctx, entry->data);
+            nnx_call_middleware(ctx, entry);
             return;
         }
         ++ctx->group_index;

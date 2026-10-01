@@ -14,8 +14,18 @@ static char *nnx_strdup(const char *s)
 static int nnx_store_route(nnx_app *app, nnx_group *group, nnx_method method,
                            const char *path, nnx_handler h)
 {
-    nnx_route *routes; size_t cap;
+    nnx_route *routes;
+    size_t cap;
+    size_t i;
+
     if (!app || !path || path[0] != '/' || !h) return -1;
+    for (i = 0; i < app->route_count; ++i) {
+        if (strcmp(app->routes[i].path, path) == 0 &&
+            (app->routes[i].method == method ||
+             app->routes[i].method == NNX_METHOD_ANY ||
+             method == NNX_METHOD_ANY))
+            return -1;
+    }
     if (app->route_count == app->route_capacity) {
         cap = app->route_capacity ? app->route_capacity * 2 : 8;
         routes = realloc(app->routes, cap * sizeof(*routes));
@@ -131,7 +141,77 @@ nnx_handler nnx_match_route(const nnx_app *app, nnx_method method, const char *p
             ctx->group = app->routes[i].group;
             return app->routes[i].handler;
         }
+
+    if (method == NNX_HEAD)
+        return nnx_match_route(app, NNX_GET, path, ctx);
     return NULL;
+}
+
+static int nnx_pattern_matches(const char *pattern, const char *path)
+{
+    nnx_ctx scratch = {0};
+
+    if (!strchr(pattern, ':') && !strchr(pattern, '*'))
+        return strcmp(pattern, path) == 0;
+    if (strchr(pattern, ':') && !strchr(pattern, '*'))
+        return param_match(pattern, path, &scratch);
+    if (strchr(pattern, '*'))
+        return wildcard_match(pattern, path, &scratch);
+    return 0;
+}
+
+static int nnx_allow_append(char *buffer, size_t capacity, size_t *used,
+                            const char *method)
+{
+    size_t len = strlen(method);
+    size_t extra = *used ? 2 : 0;
+
+    if (*used + extra + len + 1 > capacity) return -1;
+    if (*used) {
+        buffer[(*used)++] = ',';
+        buffer[(*used)++] = ' ';
+    }
+    memcpy(buffer + *used, method, len);
+    *used += len;
+    buffer[*used] = 0;
+    return 0;
+}
+
+int nnx_route_allow(const nnx_app *app, const char *path,
+                    char *buffer, size_t capacity)
+{
+    static const nnx_method methods[] = {
+        NNX_GET, NNX_HEAD, NNX_POST, NNX_PUT,
+        NNX_PATCH, NNX_DELETE, NNX_OPTIONS
+    };
+    static const char *names[] = {
+        "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+    };
+    unsigned int mask = 0;
+    size_t i;
+    size_t used = 0;
+
+    if (!app || !path || !buffer || capacity == 0) return -1;
+    buffer[0] = 0;
+
+    for (i = 0; i < app->route_count; ++i) {
+        nnx_method method;
+        if (!nnx_pattern_matches(app->routes[i].path, path)) continue;
+        method = app->routes[i].method;
+        if (method == NNX_METHOD_ANY)
+            mask = (1u << NNX_METHOD_ANY) - 1u;
+        else
+            mask |= 1u << method;
+        if (method == NNX_GET)
+            mask |= 1u << NNX_HEAD;
+    }
+
+    if (!mask) return -1;
+    for (i = 0; i < sizeof(methods) / sizeof(methods[0]); ++i)
+        if ((mask & (1u << methods[i])) &&
+            nnx_allow_append(buffer, capacity, &used, names[i]) != 0)
+            return -1;
+    return 0;
 }
 
 int nnx_route_path_exists(const nnx_app *app, const char *path)
