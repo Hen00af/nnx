@@ -34,10 +34,18 @@ NGINX_SRC=$(cd "$NGINX_INPUT" && pwd)
 APP=$(cd "$(dirname "$APP_INPUT")" && pwd)/$(basename "$APP_INPUT")
 MODULE=$("$ROOT/scripts/build-app-module.sh" "$NGINX_SRC" "$APP")
 PREFIX=$(mktemp -d /tmp/nnx-run-XXXXXX)
+NGINX_PID=""
 mkdir -p "$PREFIX/logs"
 
 cleanup() {
+    status=$?
+    trap - EXIT INT TERM
+    if [ -n "$NGINX_PID" ] && kill -0 "$NGINX_PID" 2>/dev/null; then
+        kill "$NGINX_PID" 2>/dev/null || true
+        wait "$NGINX_PID" 2>/dev/null || true
+    fi
     rm -rf "$PREFIX"
+    exit "$status"
 }
 trap cleanup EXIT INT TERM
 
@@ -59,4 +67,13 @@ EOF
 
 echo "nnx: app=$APP" >&2
 echo "nnx: listening on http://127.0.0.1:$PORT" >&2
-"$NGINX_SRC/objs/nginx" -p "$PREFIX" -c "$PREFIX/nginx.conf"
+
+"$NGINX_SRC/objs/nginx" -p "$PREFIX" -c "$PREFIX/nginx.conf" &
+NGINX_PID=$!
+
+set +e
+wait "$NGINX_PID"
+status=$?
+set -e
+NGINX_PID=""
+exit "$status"
