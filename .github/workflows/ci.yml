@@ -63,3 +63,34 @@ jobs:
           if [ -f /tmp/nnx-nginx.pid ]; then
             kill "$(cat /tmp/nnx-nginx.pid)" 2>/dev/null || true
           fi
+
+
+  macos-smoke:
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax
+        run: |
+          for script in scripts/*.sh; do
+            sh -n "$script"
+          done
+
+      - name: Unit tests
+        run: make test
+
+      - name: Install PCRE2
+        run: brew install pcre2
+
+      - name: Download Nginx
+        run: |
+          curl -fsSLO https://nginx.org/download/nginx-1.30.5.tar.gz
+          tar xzf nginx-1.30.5.tar.gz
+
+      - name: Smoke test public app runner
+        run: ./scripts/run-app-smoke-test.sh ./nginx-1.30.5
+
+      - name: Run real Nginx integration suite
+        run: ./scripts/integration-test.sh ./nginx-1.30.5
