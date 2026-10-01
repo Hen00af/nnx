@@ -30,5 +30,6 @@ nnx_middleware nnx_request_id_middleware(void);
 nnx_middleware nnx_cors(nnx_cors_config config);
 nnx_middleware nnx_basic_auth(nnx_basic_auth_config config);
 nnx_middleware nnx_secure(nnx_secure_config config);
+nnx_middleware nnx_body_limit(size_t max_bytes);
 
 #endif
