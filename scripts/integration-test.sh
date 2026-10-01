@@ -118,6 +118,19 @@ method_body="$PREFIX/405.body"
 curl -sS -X DELETE -D "$method_headers" -o "$method_body" http://127.0.0.1:8080/users/42
 grep -q 'HTTP/1.1 405' "$method_headers"
 grep -q '"error":405' "$method_body"
+grep -qi '^Allow: GET, HEAD' "$method_headers"
+
+head_headers="$PREFIX/head.headers"
+curl -sSI -D "$head_headers" -o /dev/null http://127.0.0.1:8080/users/42
+grep -q 'HTTP/1.1 200' "$head_headers"
+
+options_headers="$PREFIX/options.headers"
+options_body="$PREFIX/options.body"
+curl -sS -X OPTIONS -D "$options_headers" -o "$options_body" \
+  http://127.0.0.1:8080/users/42
+grep -q 'HTTP/1.1 405' "$options_headers"
+grep -qi '^Allow: GET, HEAD' "$options_headers"
+grep -q '"error":405' "$options_body"
 
 
 payload_headers="$PREFIX/413.headers"
