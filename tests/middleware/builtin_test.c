@@ -165,11 +165,11 @@ static void encode_basic_header(const char *plain, char *out, size_t cap)
     n = 6;
 
     while (i < len) {
+        size_t remain = len - i;
         unsigned int a = (unsigned char)plain[i++];
-        unsigned int b = i < len ? (unsigned char)plain[i++] : 0;
-        unsigned int c = i < len ? (unsigned char)plain[i++] : 0;
+        unsigned int b = remain > 1 ? (unsigned char)plain[i++] : 0;
+        unsigned int c = remain > 2 ? (unsigned char)plain[i++] : 0;
         unsigned int triple = (a << 16) | (b << 8) | c;
-        size_t remain = len - (i >= 3 ? i - 3 : 0);
 
         assert(n + 4 < cap);
         out[n++] = table[(triple >> 18) & 0x3f];
