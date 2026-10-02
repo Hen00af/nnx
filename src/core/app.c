@@ -65,7 +65,10 @@ static int nnx_add_middleware(nnx_middleware_entry **entries,
 {
     nnx_middleware_entry *next;
     size_t cap;
-    if (!middleware.fn) return -1;
+    if (!middleware.fn) {
+        if (middleware.destroy) middleware.destroy(middleware.data);
+        return -1;
+    }
     if (*count == *capacity) {
         cap = *capacity ? *capacity * 2 : 4;
         next = realloc(*entries, cap * sizeof(*next));
