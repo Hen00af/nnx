@@ -2,7 +2,7 @@
 
 **nnx** is an experimental Echo-inspired web framework for C that executes application handlers directly inside Nginx workers.
 
-> **Status:** v0.1 pre-release. The public API is still being hardened and may change before v1.0.
+> **Status:** v0.1.0. The public API is pre-v1 and may still change before v1.0.
 
 Nginx remains an external dependency. nnx does not vendor or fork Nginx.
 
@@ -236,10 +236,8 @@ See `docs/adr/0001-runtime-model.md`.
 
 ## Project status
 
-The release checklist is tracked in GitHub issue #21. The broader framework roadmap is issue #19.
-
-Before v0.1.0, nnx is still tightening routing edge cases, process-fault tests, documentation, versioning, and release packaging.
+v0.1.0 is the first public release of nnx. The broader framework roadmap is tracked in GitHub issue #19.
 
 ## License
 
-A project license has not been selected yet. Until one is added, do not assume permission to redistribute or incorporate nnx into another project.
+nnx is released under the MIT License. See `LICENSE`.
