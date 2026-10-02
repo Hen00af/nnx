@@ -160,36 +160,73 @@ static int b64_value(unsigned char c)
     return -1;
 }
 
-static int decode_basic(const char *src, char *out, size_t cap)
+static char *decode_basic(const char *src)
 {
     unsigned int acc = 0;
     int bits = 0;
+    size_t src_len;
     size_t n = 0;
+    char *out;
     int v;
+
+    if (!src) return NULL;
+    src_len = strlen(src);
+    if (src_len == (size_t)-1) return NULL;
+    out = malloc(src_len + 1);
+    if (!out) return NULL;
 
     while (*src && *src != '=') {
         v = b64_value((unsigned char)*src++);
-        if (v < 0) return -1;
+        if (v < 0) {
+            free(out);
+            return NULL;
+        }
         acc = (acc << 6) | (unsigned int)v;
         bits += 6;
         if (bits >= 8) {
             bits -= 8;
-            if (n + 1 >= cap) return -1;
             out[n++] = (char)((acc >> bits) & 0xff);
         }
     }
     out[n] = 0;
-    return 0;
+    return out;
 }
 
-static int secure_equal(const char *a, const char *b)
+static int secure_basic_equal(const char *decoded,
+                              const nnx_basic_auth_state *state)
 {
-    size_t al = strlen(a), bl = strlen(b), i, max = al > bl ? al : bl;
-    unsigned int diff = (unsigned int)(al ^ bl);
+    size_t dl;
+    size_t ul;
+    size_t pl;
+    size_t expected_len;
+    size_t max;
+    size_t i;
+    unsigned int diff;
+
+    if (!decoded || !state || !state->username || !state->password)
+        return 0;
+
+    dl = strlen(decoded);
+    ul = strlen(state->username);
+    pl = strlen(state->password);
+    if (ul > (size_t)-1 - pl - 1)
+        return 0;
+    expected_len = ul + 1 + pl;
+    max = dl > expected_len ? dl : expected_len;
+    diff = (unsigned int)(dl ^ expected_len);
+
     for (i = 0; i < max; ++i) {
-        unsigned char ac = i < al ? (unsigned char)a[i] : 0;
-        unsigned char bc = i < bl ? (unsigned char)b[i] : 0;
-        diff |= ac ^ bc;
+        unsigned char actual = i < dl ? (unsigned char)decoded[i] : 0;
+        unsigned char expected = 0;
+
+        if (i < ul)
+            expected = (unsigned char)state->username[i];
+        else if (i == ul)
+            expected = ':';
+        else if (i < expected_len)
+            expected = (unsigned char)state->password[i - ul - 1];
+
+        diff |= actual ^ expected;
     }
     return diff == 0;
 }
@@ -208,8 +245,7 @@ static void basic_auth_middleware(nnx_ctx *ctx, void *data)
 {
     nnx_basic_auth_state *state = data;
     const char *authorization;
-    char decoded[512];
-    char expected[512];
+    char *decoded = NULL;
     char challenge[256];
 
     if (!state) {
@@ -218,13 +254,14 @@ static void basic_auth_middleware(nnx_ctx *ctx, void *data)
     }
 
     authorization = nnx_header(ctx, "Authorization");
-    if (authorization && strncmp(authorization, "Basic ", 6) == 0 &&
-        decode_basic(authorization + 6, decoded, sizeof(decoded)) == 0) {
-        snprintf(expected, sizeof(expected), "%s:%s", state->username, state->password);
-        if (secure_equal(decoded, expected)) {
+    if (authorization && strncmp(authorization, "Basic ", 6) == 0) {
+        decoded = decode_basic(authorization + 6);
+        if (decoded && secure_basic_equal(decoded, state)) {
+            free(decoded);
             nnx_next(ctx);
             return;
         }
+        free(decoded);
     }
 
     snprintf(challenge, sizeof(challenge), "Basic realm=\"%s\"", state->realm);
