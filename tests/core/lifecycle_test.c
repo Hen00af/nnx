@@ -37,6 +37,20 @@ static nnx_middleware owned_middleware(void)
     return m;
 }
 
+
+static nnx_middleware invalid_owned_middleware(void)
+{
+    nnx_middleware m;
+    int *value = malloc(sizeof(*value));
+
+    assert(value);
+    *value = 1;
+    m.fn = NULL;
+    m.data = value;
+    m.destroy = destroy_counter;
+    return m;
+}
+
 int main(void)
 {
     int i;
@@ -64,5 +78,23 @@ int main(void)
     }
 
     assert(destroyed == 2000);
+
+    {
+        nnx_app *app = nnx_new();
+        nnx_group *group;
+
+        assert(app);
+        assert(nnx_use(app, invalid_owned_middleware()) == -1);
+        assert(destroyed == 2001);
+
+        group = nnx_group_new(app, "/api");
+        assert(group);
+        assert(nnx_group_use(group, invalid_owned_middleware()) == -1);
+        assert(destroyed == 2002);
+
+        nnx_free(app);
+        assert(destroyed == 2002);
+    }
+
     return 0;
 }
