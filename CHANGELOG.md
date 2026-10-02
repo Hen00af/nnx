@@ -2,9 +2,9 @@
 
 All notable changes to nnx will be documented in this file.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-02
 
-First public prerelease of the Nginx-native C web framework.
+First public release of the Nginx-native C web framework.
 
 ### Added
 
