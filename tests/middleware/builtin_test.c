@@ -4,7 +4,7 @@
 #include <nnx/middleware.h>
 #include "../../src/internal/nnx_internal.h"
 
-static char request_authorization[128];
+static char request_authorization[2048];
 static char request_id_header[128];
 static char last_log[512];
 static char header_names[16][64];
@@ -151,6 +151,35 @@ static void test_secure_headers(void)
     nnx_free(app);
 }
 
+
+static void encode_basic_header(const char *plain, char *out, size_t cap)
+{
+    static const char table[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    size_t len = strlen(plain);
+    size_t i = 0;
+    size_t n = 0;
+
+    assert(cap > 7);
+    memcpy(out, "Basic ", 6);
+    n = 6;
+
+    while (i < len) {
+        unsigned int a = (unsigned char)plain[i++];
+        unsigned int b = i < len ? (unsigned char)plain[i++] : 0;
+        unsigned int c = i < len ? (unsigned char)plain[i++] : 0;
+        unsigned int triple = (a << 16) | (b << 8) | c;
+        size_t remain = len - (i >= 3 ? i - 3 : 0);
+
+        assert(n + 4 < cap);
+        out[n++] = table[(triple >> 18) & 0x3f];
+        out[n++] = table[(triple >> 12) & 0x3f];
+        out[n++] = remain > 1 ? table[(triple >> 6) & 0x3f] : '=';
+        out[n++] = remain > 2 ? table[triple & 0x3f] : '=';
+    }
+    out[n] = 0;
+}
+
 static void test_basic_auth(void)
 {
     nnx_app *app;
@@ -181,6 +210,57 @@ static void test_basic_auth(void)
     nnx_free(app);
 }
 
+
+
+static void test_basic_auth_long_username_cannot_bypass(void)
+{
+    nnx_app *app;
+    nnx_ctx ctx;
+    char username[511];
+    char bypass_plain[512];
+    char valid_plain[520];
+    nnx_basic_auth_config config;
+    size_t i;
+
+    for (i = 0; i < 510; ++i)
+        username[i] = 'a';
+    username[510] = 0;
+
+    memcpy(bypass_plain, username, 510);
+    bypass_plain[510] = ':';
+    bypass_plain[511] = 0;
+
+    memcpy(valid_plain, username, 510);
+    memcpy(valid_plain + 510, ":secret", 8);
+
+    config.username = username;
+    config.password = "secret";
+    config.realm = "nnx";
+
+    reset_state();
+    app = nnx_new();
+    assert(app);
+    assert(nnx_use(app, nnx_basic_auth(config)) == 0);
+    encode_basic_header(bypass_plain, request_authorization,
+                        sizeof(request_authorization));
+    nnx_ctx_init(&ctx, NULL, &fake, "GET", "/private");
+    nnx_dispatch(app, &ctx, ok_endpoint);
+    assert(endpoint_calls == 0);
+    assert(status_seen == 401);
+    nnx_free(app);
+
+    reset_state();
+    app = nnx_new();
+    assert(app);
+    assert(nnx_use(app, nnx_basic_auth(config)) == 0);
+    encode_basic_header(valid_plain, request_authorization,
+                        sizeof(request_authorization));
+    nnx_ctx_init(&ctx, NULL, &fake, "GET", "/private");
+    nnx_dispatch(app, &ctx, ok_endpoint);
+    assert(endpoint_calls == 1);
+    assert(status_seen == 200);
+    nnx_free(app);
+}
 
 static void test_body_limit(void)
 {
@@ -217,6 +297,7 @@ int main(void)
     test_cors_preflight();
     test_secure_headers();
     test_basic_auth();
+    test_basic_auth_long_username_cannot_bypass();
     test_body_limit();
     return 0;
 }
