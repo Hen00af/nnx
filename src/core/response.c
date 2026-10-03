@@ -2,9 +2,36 @@
 #include <string.h>
 #include "../internal/nnx_internal.h"
 
+static int nnx_header_name_valid(const char *name)
+{
+    const unsigned char *p = (const unsigned char *)name;
+
+    if (!p || !*p) return 0;
+    for (; *p; ++p) {
+        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+            (*p >= '0' && *p <= '9') ||
+            strchr("!#$%&'*+-.^_`|~", *p))
+            continue;
+        return 0;
+    }
+    return 1;
+}
+
+static int nnx_header_value_valid(const char *value)
+{
+    const unsigned char *p = (const unsigned char *)value;
+
+    if (!p) return 0;
+    for (; *p; ++p)
+        if ((*p < 0x20 && *p != '\t') || *p == 0x7f)
+            return 0;
+    return 1;
+}
+
 int nnx_set_header(nnx_ctx *ctx, const char *name, const char *value)
 {
-    if (!ctx || !name || !value || ctx->response_sent ||
+    if (!ctx || !nnx_header_name_valid(name) ||
+        !nnx_header_value_valid(value) || ctx->response_sent ||
         !ctx->adapter || !ctx->adapter->set_header)
         return -1;
     return ctx->adapter->set_header(ctx->adapter_request, name, value);
@@ -14,7 +41,8 @@ int nnx_blob(nnx_ctx *ctx, int status, const char *content_type,
              const void *data, size_t len)
 {
     static const char empty = 0;
-    if (!ctx || !content_type || (!data && len != 0) || ctx->response_sent ||
+    if (!ctx || !nnx_header_value_valid(content_type) ||
+        (!data && len != 0) || ctx->response_sent ||
         !ctx->adapter || !ctx->adapter->send)
         return -1;
     if (!data) data = &empty;

@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
-#include <nnx.h>
+#include "../../src/internal/nnx_internal.h"
 
 static int destroyed;
 
@@ -94,6 +94,20 @@ int main(void)
 
         nnx_free(app);
         assert(destroyed == 2002);
+    }
+
+    {
+        nnx_app *app = nnx_new();
+        nnx_group *group = nnx_group_new(app, "/root");
+
+        assert(app && group);
+        for (i = 1; i < NNX_MAX_GROUP_DEPTH; ++i) {
+            group = nnx_group_group(group, "/child");
+            assert(group);
+        }
+        assert(nnx_group_get(group, "/ok", noop_handler) == 0);
+        assert(nnx_group_group(group, "/too-deep") == NULL);
+        nnx_free(app);
     }
 
     return 0;

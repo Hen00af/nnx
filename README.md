@@ -94,6 +94,7 @@ The current runner is development tooling. A dedicated `nnx run app.c` CLI is pl
 - 405 responses with an `Allow` header
 - duplicate exact route registration rejection
 - nested route groups and group-scoped middleware
+- up to eight nested route groups; creating a deeper group fails during registration
 - composable middleware with before/after unwind
 - Logger, RequestID, CORS, BasicAuth, Secure headers, and BodyLimit middleware
 - query, header, cookie, form, body, host, scheme, and client-IP access

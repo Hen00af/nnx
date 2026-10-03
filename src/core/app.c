@@ -120,9 +120,14 @@ static nnx_group *nnx_create_group(nnx_app *app, nnx_group *parent,
                                     const char *prefix)
 {
     nnx_group *group;
+    const nnx_group *ancestor;
+    size_t parent_depth = 0;
     char *full;
 
     if (!app || !prefix || prefix[0] != '/') return NULL;
+    for (ancestor = parent; ancestor; ancestor = ancestor->parent) {
+        if (++parent_depth >= NNX_MAX_GROUP_DEPTH) return NULL;
+    }
     full = nnx_join_prefix(parent ? parent->prefix : NULL, prefix);
     if (!full) return NULL;
 
