@@ -53,6 +53,17 @@ static void form(nnx_ctx *ctx)
     nnx_text(ctx, 200, name ? name : "(missing)");
 }
 
+static void header_probe(nnx_ctx *ctx)
+{
+    const char *value = nnx_form(ctx, "value");
+
+    if (!value || nnx_set_header(ctx, "X-Probe", value) != 0) {
+        nnx_text(ctx, 400, "invalid header");
+        return;
+    }
+    nnx_text(ctx, 200, "ok");
+}
+
 static void set_cookie(nnx_ctx *ctx)
 {
     nnx_cookie_config cookie = {
@@ -149,6 +160,7 @@ int nnx_register(nnx_app *app)
     if (nnx_post(app, "/echo", echo_body) != 0) return -1;
     if (nnx_get(app, "/implicit-500", implicit_500) != 0) return -1;
     if (nnx_post(app, "/form", form) != 0) return -1;
+    if (nnx_post(app, "/header-probe", header_probe) != 0) return -1;
     if (nnx_get(app, "/cookie", set_cookie) != 0) return -1;
     if (nnx_get(app, "/cookie/read", read_cookie) != 0) return -1;
     if (nnx_get(app, "/metadata", metadata) != 0) return -1;

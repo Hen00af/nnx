@@ -87,6 +87,15 @@ assert_body "nginx" "http://127.0.0.1:8080/search?q=nginx"
 assert_body "hello nnx" -X POST -H "Content-Type: text/plain" --data-binary "hello nnx" http://127.0.0.1:8080/echo
 assert_body "Seiya Hattori" -X POST -H "Content-Type: application/x-www-form-urlencoded" --data "name=Seiya+Hattori" http://127.0.0.1:8080/form
 
+header_probe_headers="$PREFIX/header-probe.headers"
+assert_status 400 -X POST -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-binary 'value=ok%0D%0AX:y' \
+  -D "$header_probe_headers" http://127.0.0.1:8080/header-probe
+if grep -qi '^X:' "$header_probe_headers"; then
+    echo "response header injection was not rejected" >&2
+    exit 1
+fi
+
 cookie_headers="$PREFIX/cookie.headers"
 curl -fsS -D "$cookie_headers" -c "$COOKIE" http://127.0.0.1:8080/cookie >/dev/null
 grep -qi '^Set-Cookie: nnx_session=hello' "$cookie_headers"

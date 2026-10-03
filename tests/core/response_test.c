@@ -139,5 +139,15 @@ int main(void)
     assert(strcmp(header_name_seen, "Location") == 0);
     assert(strcmp(header_value_seen, "/new") == 0);
     assert(status_seen == 302);
+
+    nnx_ctx_init(&ctx, NULL, &fake, "GET", "/headers");
+    assert(nnx_set_header(&ctx, "X-Test", "safe") == 0);
+    assert(nnx_set_header(&ctx, "X-Test", "safe\r\nX-Injected: yes") == -1);
+    assert(nnx_set_header(&ctx, "X-Bad\nName", "value") == -1);
+    assert(nnx_set_header(&ctx, "Bad Name", "value") == -1);
+    assert(strcmp(header_name_seen, "X-Test") == 0);
+    assert(strcmp(header_value_seen, "safe") == 0);
+    assert(nnx_blob(&ctx, 200, "text/plain\r\nX-Injected: yes", "ok", 2) == -1);
+    assert(nnx_text(&ctx, 200, "ok") == 0);
     return 0;
 }
