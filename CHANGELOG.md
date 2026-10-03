@@ -2,6 +2,20 @@
 
 All notable changes to nnx will be documented in this file.
 
+## [0.1.1] - 2026-10-03
+
+### Fixed
+
+- Prevent BasicAuth bypass caused by truncating long expected credentials.
+- Release middleware state when registration fails because its callback is NULL.
+- Prepare response buffers before sending Nginx headers and publish complete header entries only.
+- Reject invalid response header names and values.
+- Reject route groups deeper than the supported eight levels during registration.
+
+### Tests
+
+- Add regression coverage for long BasicAuth credentials, middleware ownership, response allocation failures, header injection, and group depth.
+
 ## [0.1.0] - 2026-10-02
 
 First public release of the Nginx-native C web framework.
